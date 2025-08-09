@@ -39,11 +39,11 @@ export const MentorProfile: React.FC = () => {
         });
       } else {
         await navigator.clipboard.writeText(publicUrl);
-        showSuccess('Public profile link copied to clipboard!');
+        showSuccess("Public profile link copied to clipboard!");
       }
     } catch (err) {
-      console.error('Error sharing profile:', err);
-      showError('Failed to share profile');
+      console.error("Error sharing profile:", err);
+      showError("Failed to share profile");
     }
   };
 
@@ -226,7 +226,11 @@ export const MentorProfile: React.FC = () => {
               <MessageCircle className="h-4 w-4 mr-2" />
               Message
             </Button>
-            <Button variant="outline" onClick={shareProfile} className="flex items-center">
+            <Button
+              variant="outline"
+              onClick={shareProfile}
+              className="flex items-center"
+            >
               <Share2 className="h-4 w-4 mr-2" />
               Share Profile
             </Button>
@@ -276,19 +280,30 @@ export const MentorProfile: React.FC = () => {
 
               {/* Recent Reviews */}
               <div className="space-y-4">
-                <h3 className="text-lg font-medium text-gray-900 mb-3">Recent Reviews</h3>
+                <h3 className="text-lg font-medium text-gray-900 mb-3">
+                  Recent Reviews
+                </h3>
                 {(mentor.reviews || [])
                   .slice(0, 3)
                   .map((rev: any, idx: number) => (
-                    <div key={idx} className="border-b border-gray-200 pb-4 last:border-b-0">
+                    <div
+                      key={idx}
+                      className="border-b border-gray-200 pb-4 last:border-b-0"
+                    >
                       <div className="flex items-center mb-2">
-                        <RatingDisplay rating={rev.rating || 5} size="sm" className="mr-2" />
+                        <RatingDisplay
+                          rating={rev.rating || 5}
+                          size="sm"
+                          className="mr-2"
+                        />
                         <span className="text-sm text-gray-600">
-                          {rev.learnerName || 'Anonymous'} • {formatDate(rev.date || new Date().toISOString())}
+                          {rev.learnerName || "Anonymous"} •{" "}
+                          {formatDate(rev.date || new Date().toISOString())}
                         </span>
                       </div>
                       <p className="text-gray-700 text-sm">
-                        {rev.comment || "Great session! Very helpful and knowledgeable mentor."}
+                        {rev.comment ||
+                          "Great session! Very helpful and knowledgeable mentor."}
                       </p>
                     </div>
                   ))}
@@ -297,31 +312,6 @@ export const MentorProfile: React.FC = () => {
                   <p className="text-gray-500 text-center py-4">
                     No reviews yet. Be the first to book a session!
                   </p>
-                )}
-              </div>
-            </div>
-                              key={i}
-                              className={`h-4 w-4 ${
-                                i < Math.round(rev.rating || 0)
-                                  ? "text-yellow-400 fill-yellow-400"
-                                  : "text-gray-300"
-                              }`}
-                            />
-                          ))}
-                        </div>
-                        <span className="text-sm text-gray-600 ml-2">
-                          {new Date(
-                            rev.date || rev.submittedAt || Date.now()
-                          ).toDateString()}
-                        </span>
-                      </div>
-                      <p className="text-gray-700">
-                        {rev.comment || rev.content}
-                      </p>
-                    </div>
-                  ))}
-                {(mentor.reviews || []).length === 0 && (
-                  <p className="text-gray-500">No reviews yet.</p>
                 )}
               </div>
             </div>
