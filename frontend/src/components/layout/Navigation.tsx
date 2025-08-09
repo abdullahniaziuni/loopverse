@@ -23,6 +23,7 @@ export const Navigation: React.FC = () => {
     { path: "/mentor/availability", label: "Availability" },
     { path: "/mentor/requests", label: "Booking Requests" },
     { path: "/mentor/sessions", label: "My Sessions" },
+    { path: "/mentor/messages", label: "Messages" },
   ];
 
   const adminLinks = [

@@ -1,7 +1,7 @@
-const Mentor = require('../Models/mentor');
-const jwt = require('jsonwebtoken');
-const { validationResult } = require('express-validator');
-const bcrypt = require('bcrypt');
+const Mentor = require("../Models/mentor");
+const jwt = require("jsonwebtoken");
+const { validationResult } = require("express-validator");
+const bcrypt = require("bcrypt");
 
 /**
  * Mentor Controller
@@ -20,15 +20,21 @@ const mentorController = {
         return res.status(400).json({ errors: errors.array() });
       }
 
-      const { 
-        firstName, lastName, email, password, 
-        biography, skills, expertise, timezone 
+      const {
+        firstName,
+        lastName,
+        email,
+        password,
+        biography,
+        skills,
+        expertise,
+        timezone,
       } = req.body;
 
       // Check if mentor already exists
       const existingMentor = await Mentor.findOne({ email });
       if (existingMentor) {
-        return res.status(400).json({ message: 'Email already in use' });
+        return res.status(400).json({ message: "Email already in use" });
       }
 
       // Create new mentor
@@ -37,11 +43,11 @@ const mentorController = {
         lastName,
         email,
         password,
-        biography: biography || '',
+        biography: biography || "",
         skills: skills || [],
         expertise: expertise || [],
-        timezone: timezone || 'UTC',
-        isVerified: false // New mentors start unverified
+        timezone: timezone || "UTC",
+        isVerified: false, // New mentors start unverified
       });
 
       // Save mentor
@@ -51,11 +57,11 @@ const mentorController = {
       const token = jwt.sign(
         { id: mentor._id, role: mentor.role },
         process.env.JWT_SECRET,
-        { expiresIn: '24h' }
+        { expiresIn: "24h" }
       );
 
       res.status(201).json({
-        message: 'Mentor registered successfully, pending verification',
+        message: "Mentor registered successfully, pending verification",
         token,
         mentor: {
           id: mentor._id,
@@ -63,12 +69,12 @@ const mentorController = {
           lastName: mentor.lastName,
           email: mentor.email,
           role: mentor.role,
-          isVerified: mentor.isVerified
-        }
+          isVerified: mentor.isVerified,
+        },
       });
     } catch (error) {
-      console.error('Error registering mentor:', error);
-      res.status(500).json({ message: 'Server error during registration' });
+      console.error("Error registering mentor:", error);
+      res.status(500).json({ message: "Server error during registration" });
     }
   },
 
@@ -83,25 +89,25 @@ const mentorController = {
       // Find mentor by email
       const mentor = await Mentor.findOne({ email });
       if (!mentor) {
-        return res.status(401).json({ message: 'Invalid credentials' });
+        return res.status(401).json({ message: "Invalid credentials" });
       }
 
       // Verify password
       const isMatch = await mentor.comparePassword(password);
       if (!isMatch) {
-        return res.status(401).json({ message: 'Invalid credentials' });
+        return res.status(401).json({ message: "Invalid credentials" });
       }
 
       // Check if account is active
       if (!mentor.isActive) {
-        return res.status(403).json({ message: 'Account is inactive' });
+        return res.status(403).json({ message: "Account is inactive" });
       }
 
       // Record login information
       const loginInfo = {
         ipAddress: req.ip,
-        device: req.headers['user-agent'],
-        location: req.body.location || 'Unknown'
+        device: req.headers["user-agent"],
+        location: req.body.location || "Unknown",
       };
 
       mentor.loginHistory.push(loginInfo);
@@ -112,11 +118,11 @@ const mentorController = {
       const token = jwt.sign(
         { id: mentor._id, role: mentor.role },
         process.env.JWT_SECRET,
-        { expiresIn: '24h' }
+        { expiresIn: "24h" }
       );
 
       res.json({
-        message: 'Login successful',
+        message: "Login successful",
         token,
         mentor: {
           id: mentor._id,
@@ -125,12 +131,12 @@ const mentorController = {
           email: mentor.email,
           role: mentor.role,
           profilePicture: mentor.profilePicture,
-          isVerified: mentor.isVerified
-        }
+          isVerified: mentor.isVerified,
+        },
       });
     } catch (error) {
-      console.error('Error logging in:', error);
-      res.status(500).json({ message: 'Server error during login' });
+      console.error("Error logging in:", error);
+      res.status(500).json({ message: "Server error during login" });
     }
   },
 
@@ -142,17 +148,46 @@ const mentorController = {
     try {
       const mentorId = req.params.id || req.user.id;
 
-      const mentor = await Mentor.findById(mentorId)
-        .select('-password -loginHistory -__v');
+      const mentor = await Mentor.findById(mentorId).select(
+        "-password -loginHistory -__v"
+      );
 
       if (!mentor) {
-        return res.status(404).json({ message: 'Mentor not found' });
+        return res.status(404).json({
+          success: false,
+          error: "Mentor not found",
+        });
       }
 
-      res.json({ mentor });
+      // Transform mentor data for frontend
+      const mentorData = {
+        id: mentor._id,
+        name: `${mentor.firstName} ${mentor.lastName}`,
+        firstName: mentor.firstName,
+        lastName: mentor.lastName,
+        email: mentor.email,
+        bio: mentor.biography,
+        skills: mentor.skills.map((skill) => skill.name || skill),
+        expertise: mentor.expertise,
+        hourlyRate: mentor.hourlyRate,
+        rating: mentor.ratings.averageRating || 0,
+        totalSessions: mentor.sessionsCompleted || 0,
+        profilePicture: mentor.profilePicture,
+        timezone: mentor.timezone,
+        isVerified: mentor.isVerified,
+        yearsOfExperience: mentor.yearsOfExperience,
+        languages: mentor.languages,
+        availability: mentor.availability,
+        createdAt: mentor.createdAt,
+      };
+
+      res.json({
+        success: true,
+        data: mentorData,
+      });
     } catch (error) {
-      console.error('Error fetching profile:', error);
-      res.status(500).json({ message: 'Server error while fetching profile' });
+      console.error("Error fetching profile:", error);
+      res.status(500).json({ message: "Server error while fetching profile" });
     }
   },
 
@@ -162,9 +197,15 @@ const mentorController = {
    */
   updateProfile: async (req, res) => {
     try {
-      const { 
-        firstName, lastName, biography, yearsOfExperience, 
-        timezone, profilePicture, hourlyRate, languages 
+      const {
+        firstName,
+        lastName,
+        biography,
+        yearsOfExperience,
+        timezone,
+        profilePicture,
+        hourlyRate,
+        languages,
       } = req.body;
 
       const mentorId = req.user.id;
@@ -172,7 +213,7 @@ const mentorController = {
       // Find and update mentor
       const mentor = await Mentor.findById(mentorId);
       if (!mentor) {
-        return res.status(404).json({ message: 'Mentor not found' });
+        return res.status(404).json({ message: "Mentor not found" });
       }
 
       // Update fields if provided
@@ -187,8 +228,8 @@ const mentorController = {
 
       await mentor.save();
 
-      res.json({ 
-        message: 'Profile updated successfully',
+      res.json({
+        message: "Profile updated successfully",
         mentor: {
           id: mentor._id,
           firstName: mentor.firstName,
@@ -198,12 +239,12 @@ const mentorController = {
           timezone: mentor.timezone,
           profilePicture: mentor.profilePicture,
           hourlyRate: mentor.hourlyRate,
-          languages: mentor.languages
-        }
+          languages: mentor.languages,
+        },
       });
     } catch (error) {
-      console.error('Error updating profile:', error);
-      res.status(500).json({ message: 'Server error while updating profile' });
+      console.error("Error updating profile:", error);
+      res.status(500).json({ message: "Server error while updating profile" });
     }
   },
 
@@ -218,23 +259,25 @@ const mentorController = {
       // Find mentor
       const mentor = await Mentor.findById(req.user.id);
       if (!mentor) {
-        return res.status(404).json({ message: 'Mentor not found' });
+        return res.status(404).json({ message: "Mentor not found" });
       }
 
       // Verify current password
       const isMatch = await mentor.comparePassword(currentPassword);
       if (!isMatch) {
-        return res.status(401).json({ message: 'Current password is incorrect' });
+        return res
+          .status(401)
+          .json({ message: "Current password is incorrect" });
       }
 
       // Update password
       mentor.password = newPassword;
       await mentor.save();
 
-      res.json({ message: 'Password changed successfully' });
+      res.json({ message: "Password changed successfully" });
     } catch (error) {
-      console.error('Error changing password:', error);
-      res.status(500).json({ message: 'Server error while changing password' });
+      console.error("Error changing password:", error);
+      res.status(500).json({ message: "Server error while changing password" });
     }
   },
 
@@ -249,20 +292,20 @@ const mentorController = {
 
       const mentor = await Mentor.findById(mentorId);
       if (!mentor) {
-        return res.status(404).json({ message: 'Mentor not found' });
+        return res.status(404).json({ message: "Mentor not found" });
       }
 
       // Update skills
       mentor.skills = skills;
       await mentor.save();
 
-      res.json({ 
-        message: 'Skills updated successfully',
-        skills: mentor.skills
+      res.json({
+        message: "Skills updated successfully",
+        skills: mentor.skills,
       });
     } catch (error) {
-      console.error('Error updating skills:', error);
-      res.status(500).json({ message: 'Server error while updating skills' });
+      console.error("Error updating skills:", error);
+      res.status(500).json({ message: "Server error while updating skills" });
     }
   },
 
@@ -277,20 +320,22 @@ const mentorController = {
 
       const mentor = await Mentor.findById(mentorId);
       if (!mentor) {
-        return res.status(404).json({ message: 'Mentor not found' });
+        return res.status(404).json({ message: "Mentor not found" });
       }
 
       // Update expertise
       mentor.expertise = expertise;
       await mentor.save();
 
-      res.json({ 
-        message: 'Expertise updated successfully',
-        expertise: mentor.expertise
+      res.json({
+        message: "Expertise updated successfully",
+        expertise: mentor.expertise,
       });
     } catch (error) {
-      console.error('Error updating expertise:', error);
-      res.status(500).json({ message: 'Server error while updating expertise' });
+      console.error("Error updating expertise:", error);
+      res
+        .status(500)
+        .json({ message: "Server error while updating expertise" });
     }
   },
 
@@ -305,28 +350,30 @@ const mentorController = {
 
       const mentor = await Mentor.findById(mentorId);
       if (!mentor) {
-        return res.status(404).json({ message: 'Mentor not found' });
+        return res.status(404).json({ message: "Mentor not found" });
       }
 
       // Create portfolio item
       const portfolioItem = {
         title,
-        description: description || '',
-        link: link || '',
+        description: description || "",
+        link: link || "",
         fileUrls: fileUrls || [],
-        uploadDate: Date.now()
+        uploadDate: Date.now(),
       };
 
       mentor.portfolio.push(portfolioItem);
       await mentor.save();
 
-      res.status(201).json({ 
-        message: 'Portfolio item added successfully',
-        portfolioItem: mentor.portfolio[mentor.portfolio.length - 1]
+      res.status(201).json({
+        message: "Portfolio item added successfully",
+        portfolioItem: mentor.portfolio[mentor.portfolio.length - 1],
       });
     } catch (error) {
-      console.error('Error adding portfolio item:', error);
-      res.status(500).json({ message: 'Server error while adding portfolio item' });
+      console.error("Error adding portfolio item:", error);
+      res
+        .status(500)
+        .json({ message: "Server error while adding portfolio item" });
     }
   },
 
@@ -342,16 +389,16 @@ const mentorController = {
 
       const mentor = await Mentor.findById(mentorId);
       if (!mentor) {
-        return res.status(404).json({ message: 'Mentor not found' });
+        return res.status(404).json({ message: "Mentor not found" });
       }
 
       // Find portfolio item
       const itemIndex = mentor.portfolio.findIndex(
-        item => item._id.toString() === itemId
+        (item) => item._id.toString() === itemId
       );
 
       if (itemIndex === -1) {
-        return res.status(404).json({ message: 'Portfolio item not found' });
+        return res.status(404).json({ message: "Portfolio item not found" });
       }
 
       // Update fields if provided
@@ -362,13 +409,15 @@ const mentorController = {
 
       await mentor.save();
 
-      res.json({ 
-        message: 'Portfolio item updated successfully',
-        portfolioItem: mentor.portfolio[itemIndex]
+      res.json({
+        message: "Portfolio item updated successfully",
+        portfolioItem: mentor.portfolio[itemIndex],
       });
     } catch (error) {
-      console.error('Error updating portfolio item:', error);
-      res.status(500).json({ message: 'Server error while updating portfolio item' });
+      console.error("Error updating portfolio item:", error);
+      res
+        .status(500)
+        .json({ message: "Server error while updating portfolio item" });
     }
   },
 
@@ -383,26 +432,28 @@ const mentorController = {
 
       const mentor = await Mentor.findById(mentorId);
       if (!mentor) {
-        return res.status(404).json({ message: 'Mentor not found' });
+        return res.status(404).json({ message: "Mentor not found" });
       }
 
       // Find portfolio item
       const itemIndex = mentor.portfolio.findIndex(
-        item => item._id.toString() === itemId
+        (item) => item._id.toString() === itemId
       );
 
       if (itemIndex === -1) {
-        return res.status(404).json({ message: 'Portfolio item not found' });
+        return res.status(404).json({ message: "Portfolio item not found" });
       }
 
       // Remove portfolio item
       mentor.portfolio.splice(itemIndex, 1);
       await mentor.save();
 
-      res.json({ message: 'Portfolio item deleted successfully' });
+      res.json({ message: "Portfolio item deleted successfully" });
     } catch (error) {
-      console.error('Error deleting portfolio item:', error);
-      res.status(500).json({ message: 'Server error while deleting portfolio item' });
+      console.error("Error deleting portfolio item:", error);
+      res
+        .status(500)
+        .json({ message: "Server error while deleting portfolio item" });
     }
   },
 
@@ -417,20 +468,22 @@ const mentorController = {
 
       const mentor = await Mentor.findById(mentorId);
       if (!mentor) {
-        return res.status(404).json({ message: 'Mentor not found' });
+        return res.status(404).json({ message: "Mentor not found" });
       }
 
       // Update availability
       mentor.availability = availability;
       await mentor.save();
 
-      res.json({ 
-        message: 'Availability updated successfully',
-        availability: mentor.availability
+      res.json({
+        message: "Availability updated successfully",
+        availability: mentor.availability,
       });
     } catch (error) {
-      console.error('Error updating availability:', error);
-      res.status(500).json({ message: 'Server error while updating availability' });
+      console.error("Error updating availability:", error);
+      res
+        .status(500)
+        .json({ message: "Server error while updating availability" });
     }
   },
 
@@ -440,12 +493,13 @@ const mentorController = {
    */
   addEducation: async (req, res) => {
     try {
-      const { institution, degree, fieldOfStudy, startYear, endYear } = req.body;
+      const { institution, degree, fieldOfStudy, startYear, endYear } =
+        req.body;
       const mentorId = req.user.id;
 
       const mentor = await Mentor.findById(mentorId);
       if (!mentor) {
-        return res.status(404).json({ message: 'Mentor not found' });
+        return res.status(404).json({ message: "Mentor not found" });
       }
 
       // Create education
@@ -454,19 +508,19 @@ const mentorController = {
         degree,
         fieldOfStudy,
         startYear,
-        endYear: endYear || null
+        endYear: endYear || null,
       };
 
       mentor.education.push(education);
       await mentor.save();
 
-      res.status(201).json({ 
-        message: 'Education added successfully',
-        education: mentor.education[mentor.education.length - 1]
+      res.status(201).json({
+        message: "Education added successfully",
+        education: mentor.education[mentor.education.length - 1],
       });
     } catch (error) {
-      console.error('Error adding education:', error);
-      res.status(500).json({ message: 'Server error while adding education' });
+      console.error("Error adding education:", error);
+      res.status(500).json({ message: "Server error while adding education" });
     }
   },
 
@@ -477,21 +531,22 @@ const mentorController = {
   updateEducation: async (req, res) => {
     try {
       const { eduId } = req.params;
-      const { institution, degree, fieldOfStudy, startYear, endYear } = req.body;
+      const { institution, degree, fieldOfStudy, startYear, endYear } =
+        req.body;
       const mentorId = req.user.id;
 
       const mentor = await Mentor.findById(mentorId);
       if (!mentor) {
-        return res.status(404).json({ message: 'Mentor not found' });
+        return res.status(404).json({ message: "Mentor not found" });
       }
 
       // Find education
       const eduIndex = mentor.education.findIndex(
-        edu => edu._id.toString() === eduId
+        (edu) => edu._id.toString() === eduId
       );
 
       if (eduIndex === -1) {
-        return res.status(404).json({ message: 'Education not found' });
+        return res.status(404).json({ message: "Education not found" });
       }
 
       // Update fields if provided
@@ -503,13 +558,15 @@ const mentorController = {
 
       await mentor.save();
 
-      res.json({ 
-        message: 'Education updated successfully',
-        education: mentor.education[eduIndex]
+      res.json({
+        message: "Education updated successfully",
+        education: mentor.education[eduIndex],
       });
     } catch (error) {
-      console.error('Error updating education:', error);
-      res.status(500).json({ message: 'Server error while updating education' });
+      console.error("Error updating education:", error);
+      res
+        .status(500)
+        .json({ message: "Server error while updating education" });
     }
   },
 
@@ -524,26 +581,28 @@ const mentorController = {
 
       const mentor = await Mentor.findById(mentorId);
       if (!mentor) {
-        return res.status(404).json({ message: 'Mentor not found' });
+        return res.status(404).json({ message: "Mentor not found" });
       }
 
       // Find education
       const eduIndex = mentor.education.findIndex(
-        edu => edu._id.toString() === eduId
+        (edu) => edu._id.toString() === eduId
       );
 
       if (eduIndex === -1) {
-        return res.status(404).json({ message: 'Education not found' });
+        return res.status(404).json({ message: "Education not found" });
       }
 
       // Remove education
       mentor.education.splice(eduIndex, 1);
       await mentor.save();
 
-      res.json({ message: 'Education deleted successfully' });
+      res.json({ message: "Education deleted successfully" });
     } catch (error) {
-      console.error('Error deleting education:', error);
-      res.status(500).json({ message: 'Server error while deleting education' });
+      console.error("Error deleting education:", error);
+      res
+        .status(500)
+        .json({ message: "Server error while deleting education" });
     }
   },
 
@@ -553,12 +612,18 @@ const mentorController = {
    */
   addCertification: async (req, res) => {
     try {
-      const { title, issuingOrganization, issueDate, expiryDate, credentialURL } = req.body;
+      const {
+        title,
+        issuingOrganization,
+        issueDate,
+        expiryDate,
+        credentialURL,
+      } = req.body;
       const mentorId = req.user.id;
 
       const mentor = await Mentor.findById(mentorId);
       if (!mentor) {
-        return res.status(404).json({ message: 'Mentor not found' });
+        return res.status(404).json({ message: "Mentor not found" });
       }
 
       // Create certification
@@ -567,19 +632,21 @@ const mentorController = {
         issuingOrganization,
         issueDate: issueDate ? new Date(issueDate) : new Date(),
         expiryDate: expiryDate ? new Date(expiryDate) : null,
-        credentialURL
+        credentialURL,
       };
 
       mentor.certifications.push(certification);
       await mentor.save();
 
-      res.status(201).json({ 
-        message: 'Certification added successfully',
-        certification: mentor.certifications[mentor.certifications.length - 1]
+      res.status(201).json({
+        message: "Certification added successfully",
+        certification: mentor.certifications[mentor.certifications.length - 1],
       });
     } catch (error) {
-      console.error('Error adding certification:', error);
-      res.status(500).json({ message: 'Server error while adding certification' });
+      console.error("Error adding certification:", error);
+      res
+        .status(500)
+        .json({ message: "Server error while adding certification" });
     }
   },
 
@@ -594,26 +661,28 @@ const mentorController = {
 
       const mentor = await Mentor.findById(mentorId);
       if (!mentor) {
-        return res.status(404).json({ message: 'Mentor not found' });
+        return res.status(404).json({ message: "Mentor not found" });
       }
 
       // Find certification
       const certIndex = mentor.certifications.findIndex(
-        cert => cert._id.toString() === certId
+        (cert) => cert._id.toString() === certId
       );
 
       if (certIndex === -1) {
-        return res.status(404).json({ message: 'Certification not found' });
+        return res.status(404).json({ message: "Certification not found" });
       }
 
       // Remove certification
       mentor.certifications.splice(certIndex, 1);
       await mentor.save();
 
-      res.json({ message: 'Certification deleted successfully' });
+      res.json({ message: "Certification deleted successfully" });
     } catch (error) {
-      console.error('Error deleting certification:', error);
-      res.status(500).json({ message: 'Server error while deleting certification' });
+      console.error("Error deleting certification:", error);
+      res
+        .status(500)
+        .json({ message: "Server error while deleting certification" });
     }
   },
 
@@ -626,20 +695,20 @@ const mentorController = {
       const mentorId = req.user.id;
 
       const mentor = await Mentor.findById(mentorId)
-        .populate('activeSessions')
-        .select('activeSessions sessionsCompleted');
+        .populate("activeSessions")
+        .select("activeSessions sessionsCompleted");
 
       if (!mentor) {
-        return res.status(404).json({ message: 'Mentor not found' });
+        return res.status(404).json({ message: "Mentor not found" });
       }
 
-      res.json({ 
+      res.json({
         activeSessions: mentor.activeSessions,
-        sessionsCompleted: mentor.sessionsCompleted
+        sessionsCompleted: mentor.sessionsCompleted,
       });
     } catch (error) {
-      console.error('Error fetching sessions:', error);
-      res.status(500).json({ message: 'Server error while fetching sessions' });
+      console.error("Error fetching sessions:", error);
+      res.status(500).json({ message: "Server error while fetching sessions" });
     }
   },
 
@@ -654,13 +723,15 @@ const mentorController = {
 
       const mentor = await Mentor.findById(mentorId);
       if (!mentor) {
-        return res.status(404).json({ message: 'Mentor not found' });
+        return res.status(404).json({ message: "Mentor not found" });
       }
 
       // Find session in active sessions
       const sessionIndex = mentor.activeSessions.indexOf(sessionId);
       if (sessionIndex === -1) {
-        return res.status(404).json({ message: 'Session not found in active sessions' });
+        return res
+          .status(404)
+          .json({ message: "Session not found in active sessions" });
       }
 
       // Remove from active sessions and increment completed sessions
@@ -668,13 +739,15 @@ const mentorController = {
       mentor.sessionsCompleted += 1;
       await mentor.save();
 
-      res.json({ 
-        message: 'Session marked as completed',
-        sessionsCompleted: mentor.sessionsCompleted
+      res.json({
+        message: "Session marked as completed",
+        sessionsCompleted: mentor.sessionsCompleted,
       });
     } catch (error) {
-      console.error('Error completing session:', error);
-      res.status(500).json({ message: 'Server error while completing session' });
+      console.error("Error completing session:", error);
+      res
+        .status(500)
+        .json({ message: "Server error while completing session" });
     }
   },
 
@@ -687,23 +760,23 @@ const mentorController = {
       const mentorId = req.params.id || req.user.id;
 
       const mentor = await Mentor.findById(mentorId)
-        .select('ratings reviews')
+        .select("ratings reviews")
         .populate({
-          path: 'reviews.reviewerId',
-          select: 'firstName lastName profilePicture'
+          path: "reviews.reviewerId",
+          select: "firstName lastName profilePicture",
         });
 
       if (!mentor) {
-        return res.status(404).json({ message: 'Mentor not found' });
+        return res.status(404).json({ message: "Mentor not found" });
       }
 
-      res.json({ 
+      res.json({
         ratings: mentor.ratings,
-        reviews: mentor.reviews
+        reviews: mentor.reviews,
       });
     } catch (error) {
-      console.error('Error fetching reviews:', error);
-      res.status(500).json({ message: 'Server error while fetching reviews' });
+      console.error("Error fetching reviews:", error);
+      res.status(500).json({ message: "Server error while fetching reviews" });
     }
   },
 
@@ -717,23 +790,25 @@ const mentorController = {
 
       const mentor = await Mentor.findById(mentorId);
       if (!mentor) {
-        return res.status(404).json({ message: 'Mentor not found' });
+        return res.status(404).json({ message: "Mentor not found" });
       }
 
       if (mentor.isVerified) {
-        return res.status(400).json({ message: 'Mentor is already verified' });
+        return res.status(400).json({ message: "Mentor is already verified" });
       }
 
       // Logic to send verification request to admin
       // This would typically involve creating a notification or request record
-      
-      res.json({ 
-        message: 'Verification request submitted successfully',
-        status: 'pending'
+
+      res.json({
+        message: "Verification request submitted successfully",
+        status: "pending",
       });
     } catch (error) {
-      console.error('Error requesting verification:', error);
-      res.status(500).json({ message: 'Server error while requesting verification' });
+      console.error("Error requesting verification:", error);
+      res
+        .status(500)
+        .json({ message: "Server error while requesting verification" });
     }
   },
 
@@ -747,16 +822,18 @@ const mentorController = {
 
       const mentor = await Mentor.findById(mentorId);
       if (!mentor) {
-        return res.status(404).json({ message: 'Mentor not found' });
+        return res.status(404).json({ message: "Mentor not found" });
       }
 
       mentor.isActive = false;
       await mentor.save();
 
-      res.json({ message: 'Account deactivated successfully' });
+      res.json({ message: "Account deactivated successfully" });
     } catch (error) {
-      console.error('Error deactivating account:', error);
-      res.status(500).json({ message: 'Server error while deactivating account' });
+      console.error("Error deactivating account:", error);
+      res
+        .status(500)
+        .json({ message: "Server error while deactivating account" });
     }
   },
 
@@ -766,27 +843,86 @@ const mentorController = {
    */
   getAllMentors: async (req, res) => {
     try {
-      const { expertise, minRating } = req.query;
-      
+      const {
+        expertise,
+        minRating,
+        skills,
+        page = 1,
+        limit = 10,
+        search,
+      } = req.query;
+
       // Build query
       let query = { isVerified: true, isActive: true };
-      
+
       if (expertise) {
-        query.expertise = { $in: [expertise] };
+        query.expertise = {
+          $in: Array.isArray(expertise) ? expertise : [expertise],
+        };
       }
-      
+
+      if (skills) {
+        const skillsArray = Array.isArray(skills) ? skills : [skills];
+        query["skills.name"] = { $in: skillsArray };
+      }
+
       if (minRating) {
-        query['ratings.averageRating'] = { $gte: parseFloat(minRating) };
+        query["ratings.averageRating"] = { $gte: parseFloat(minRating) };
       }
-      
+
+      if (search) {
+        query.$or = [
+          { firstName: { $regex: search, $options: "i" } },
+          { lastName: { $regex: search, $options: "i" } },
+          { biography: { $regex: search, $options: "i" } },
+          { expertise: { $in: [new RegExp(search, "i")] } },
+        ];
+      }
+
+      const skip = (parseInt(page) - 1) * parseInt(limit);
+
       const mentors = await Mentor.find(query)
-        .select('firstName lastName profilePicture biography expertise ratings hourlyRate')
-        .sort({ 'ratings.averageRating': -1 });
-      
-      res.json({ mentors });
+        .select(
+          "firstName lastName profilePicture biography expertise skills ratings hourlyRate timezone"
+        )
+        .sort({ "ratings.averageRating": -1 })
+        .skip(skip)
+        .limit(parseInt(limit));
+
+      const total = await Mentor.countDocuments(query);
+
+      // Transform mentors for frontend
+      const transformedMentors = mentors.map((mentor) => ({
+        id: mentor._id,
+        name: `${mentor.firstName} ${mentor.lastName}`,
+        firstName: mentor.firstName,
+        lastName: mentor.lastName,
+        profilePicture: mentor.profilePicture,
+        biography: mentor.biography,
+        expertise: mentor.expertise,
+        skills: mentor.skills,
+        rating: mentor.ratings.averageRating,
+        totalRatings: mentor.ratings.totalRatings,
+        hourlyRate: mentor.hourlyRate,
+        timezone: mentor.timezone,
+      }));
+
+      res.json({
+        success: true,
+        data: {
+          mentors: transformedMentors,
+          total,
+          page: parseInt(page),
+          totalPages: Math.ceil(total / parseInt(limit)),
+        },
+        message: "Mentors retrieved successfully",
+      });
     } catch (error) {
-      console.error('Error fetching mentors:', error);
-      res.status(500).json({ message: 'Server error while fetching mentors' });
+      console.error("Error fetching mentors:", error);
+      res.status(500).json({
+        success: false,
+        error: "Server error while fetching mentors",
+      });
     }
   },
 
@@ -797,25 +933,25 @@ const mentorController = {
   searchMentors: async (req, res) => {
     try {
       const {
-        q,                  // text search query
-        expertise,          // specific expertise area
-        skills,             // specific skills
-        minRating,          // minimum rating
-        maxRating,          // maximum rating
-        availability,       // day of week (0-6)
-        minPrice,           // minimum hourly rate
-        maxPrice,           // maximum hourly rate
-        language,           // specific language
-        sort,               // sort field
-        order,              // asc or desc
+        q, // text search query
+        expertise, // specific expertise area
+        skills, // specific skills
+        minRating, // minimum rating
+        maxRating, // maximum rating
+        availability, // day of week (0-6)
+        minPrice, // minimum hourly rate
+        maxPrice, // maximum hourly rate
+        language, // specific language
+        sort, // sort field
+        order, // asc or desc
         page = 1,
-        limit = 10
+        limit = 10,
       } = req.query;
 
       // Build query
       const query = {
         isVerified: true,
-        isActive: true
+        isActive: true,
       };
 
       // Text search
@@ -825,19 +961,21 @@ const mentorController = {
 
       // Filter by expertise
       if (expertise) {
-        query.expertise = { $in: expertise.split(',') };
+        query.expertise = { $in: expertise.split(",") };
       }
 
       // Filter by skills
       if (skills) {
-        query['skills.name'] = { $in: skills.split(',') };
+        query["skills.name"] = { $in: skills.split(",") };
       }
 
       // Filter by rating range
       if (minRating || maxRating) {
-        query['ratings.averageRating'] = {};
-        if (minRating) query['ratings.averageRating'].$gte = parseFloat(minRating);
-        if (maxPrice) query['ratings.averageRating'].$lte = parseFloat(maxRating);
+        query["ratings.averageRating"] = {};
+        if (minRating)
+          query["ratings.averageRating"].$gte = parseFloat(minRating);
+        if (maxPrice)
+          query["ratings.averageRating"].$lte = parseFloat(maxRating);
       }
 
       // Filter by price range
@@ -849,34 +987,34 @@ const mentorController = {
 
       // Filter by availability
       if (availability) {
-        const days = availability.split(',').map(day => parseInt(day));
-        query['availability.dayOfWeek'] = { $in: days };
+        const days = availability.split(",").map((day) => parseInt(day));
+        query["availability.dayOfWeek"] = { $in: days };
       }
 
       // Filter by language
       if (language) {
-        query['languages.language'] = language;
+        query["languages.language"] = language;
       }
 
       // Determine sort options
       let sortOptions = {};
       if (sort) {
-        const sortOrder = order === 'desc' ? -1 : 1;
-        
-        if (sort === 'rating') {
-          sortOptions['ratings.averageRating'] = sortOrder;
-        } else if (sort === 'price') {
+        const sortOrder = order === "desc" ? -1 : 1;
+
+        if (sort === "rating") {
+          sortOptions["ratings.averageRating"] = sortOrder;
+        } else if (sort === "price") {
           sortOptions.hourlyRate = sortOrder;
-        } else if (sort === 'experience') {
+        } else if (sort === "experience") {
           sortOptions.yearsOfExperience = sortOrder;
-        } else if (sort === 'popularity') {
-          sortOptions['ratings.totalRatings'] = sortOrder;
-        } else if (sort === 'sessions') {
+        } else if (sort === "popularity") {
+          sortOptions["ratings.totalRatings"] = sortOrder;
+        } else if (sort === "sessions") {
           sortOptions.sessionsCompleted = sortOrder;
         }
       } else {
         // Default sort by rating
-        sortOptions = { 'ratings.averageRating': -1 };
+        sortOptions = { "ratings.averageRating": -1 };
       }
 
       // Calculate pagination values
@@ -888,25 +1026,27 @@ const mentorController = {
         .sort(sortOptions)
         .skip(skip)
         .limit(limitVal)
-        .select('firstName lastName profilePicture biography expertise skills ratings hourlyRate sessionsCompleted yearsOfExperience');
+        .select(
+          "firstName lastName profilePicture biography expertise skills ratings hourlyRate sessionsCompleted yearsOfExperience"
+        );
 
       // Count total results for pagination
       const totalMentors = await Mentor.countDocuments(query);
-      
+
       res.json({
         mentors,
         pagination: {
           totalMentors,
           totalPages: Math.ceil(totalMentors / limitVal),
           currentPage: parseInt(page),
-          hasMore: skip + mentors.length < totalMentors
-        }
+          hasMore: skip + mentors.length < totalMentors,
+        },
       });
     } catch (error) {
-      console.error('Error searching mentors:', error);
-      res.status(500).json({ message: 'Server error while searching mentors' });
+      console.error("Error searching mentors:", error);
+      res.status(500).json({ message: "Server error while searching mentors" });
     }
-  }
+  },
 };
 
 module.exports = mentorController;

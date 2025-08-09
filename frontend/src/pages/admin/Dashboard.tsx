@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   Users,
@@ -14,90 +14,132 @@ import {
 import { useAuth } from "../../contexts/AuthContext";
 import { Layout } from "../../components/layout";
 import { Button } from "../../components/ui";
-import {
-  generateMockMentors,
-  generateMockSessions,
-  formatDate,
-} from "../../utils";
+import { formatDate } from "../../utils";
+import { apiService } from "../../services/api";
+import { Mentor, Session } from "../../types";
 
 export const AdminDashboard: React.FC = () => {
   const { user } = useAuth();
+  const [mentors, setMentors] = useState<Mentor[]>([]);
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [pendingMentors, setPendingMentors] = useState<Mentor[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Mock data for MVP
-  const allMentors = generateMockMentors();
-  const allSessions = generateMockSessions();
+  // Fetch admin dashboard data
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setIsLoading(true);
 
-  const pendingMentors = [
-    {
-      id: "4",
-      name: "David Wilson",
-      email: "david@example.com",
-      skills: ["Python", "Django", "PostgreSQL"],
-      experience: "5 years",
-      appliedAt: "2024-08-13T10:00:00Z",
-    },
-    {
-      id: "5",
-      name: "Lisa Chen",
-      email: "lisa@example.com",
-      skills: ["React Native", "Mobile Development", "iOS"],
-      experience: "4 years",
-      appliedAt: "2024-08-12T15:00:00Z",
-    },
-  ];
+        // Fetch all mentors
+        const mentorsResponse = await apiService.getMentors({
+          page: 1,
+          limit: 100,
+        });
+        if (mentorsResponse.success && mentorsResponse.data) {
+          const allMentors = mentorsResponse.data.mentors;
+          setMentors(allMentors.filter((m) => m.isVerified));
+          setPendingMentors(allMentors.filter((m) => !m.isVerified));
+        }
 
-  const recentFeedback = [
-    {
-      id: "1",
-      sessionId: "1",
-      learnerName: "Alice J.",
-      mentorName: "Sarah Johnson",
-      rating: 5,
-      comment: "Excellent session! Very clear explanations.",
-      date: "2024-08-12",
-      flagged: false,
-    },
-    {
-      id: "2",
-      sessionId: "2",
-      learnerName: "Bob S.",
-      mentorName: "Michael Chen",
-      rating: 1,
-      comment: "Mentor was unprepared and session was not helpful.",
-      date: "2024-08-11",
-      flagged: true,
-    },
-  ];
+        // Fetch all sessions
+        const sessionsResponse = await apiService.getAllSessions();
+        if (sessionsResponse.success && sessionsResponse.data) {
+          setSessions(sessionsResponse.data);
+        }
+      } catch (error) {
+        console.error("Error fetching dashboard data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
+
+  // Recent feedback calculated from real sessions data
+  const recentFeedback = sessions
+    .filter((s) => s.learnerFeedback)
+    .map((s) => ({
+      id: s.id,
+      sessionId: s.id,
+      learnerName: s.learner?.name || "Unknown",
+      mentorName: s.mentor?.name || "Unknown",
+      rating: s.learnerFeedback?.rating || 0,
+      comment: s.learnerFeedback?.comment || "",
+      date: s.endTime,
+      flagged: s.learnerFeedback?.rating < 3, // Flag low ratings
+    }))
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .slice(0, 5);
 
   const stats = {
-    totalLearners: 1247,
-    totalMentors: allMentors.length,
-    totalSessions: 3456,
+    totalLearners: 0, // TODO: Add learners count API
+    totalMentors: mentors.length,
+    totalSessions: sessions.length,
     pendingApprovals: pendingMentors.length,
-    averageRating: 4.7,
+    averageRating:
+      sessions.length > 0
+        ? sessions
+            .filter((s) => s.learnerFeedback?.rating)
+            .reduce((sum, s) => sum + (s.learnerFeedback?.rating || 0), 0) /
+          Math.max(1, sessions.filter((s) => s.learnerFeedback?.rating).length)
+        : 0,
     flaggedFeedback: recentFeedback.filter((f) => f.flagged).length,
   };
 
+  // Recent activity calculated from real data
   const recentActivity = [
-    {
-      id: "1",
+    // Mentor applications
+    ...pendingMentors.map((mentor) => ({
+      id: `mentor-${mentor.id}`,
       type: "mentor_application",
-      message: "David Wilson applied to become a mentor",
-      timestamp: "2024-08-13T10:00:00Z",
-    },
-    {
-      id: "2",
-      type: "session_completed",
-      message: "Session completed between Alice J. and Sarah Johnson",
-      timestamp: "2024-08-12T15:00:00Z",
-    },
-    {
-      id: "3",
-      type: "feedback_flagged",
-      message: "Feedback flagged for review from Bob S.",
-      timestamp: "2024-08-11T14:00:00Z",
-    },
-  ];
+      message: `${mentor.name} applied to become a mentor`,
+      timestamp: mentor.createdAt,
+    })),
+    // Completed sessions
+    ...sessions
+      .filter((s) => s.status === "completed")
+      .slice(0, 3)
+      .map((session) => ({
+        id: `session-${session.id}`,
+        type: "session_completed",
+        message: `Session completed between ${session.learner?.name} and ${session.mentor?.name}`,
+        timestamp: session.endTime,
+      })),
+    // Flagged feedback
+    ...recentFeedback
+      .filter((f) => f.flagged)
+      .slice(0, 2)
+      .map((feedback) => ({
+        id: `feedback-${feedback.id}`,
+        type: "feedback_flagged",
+        message: `Feedback flagged for review from ${feedback.learnerName}`,
+        timestamp: feedback.date,
+      })),
+  ]
+    .sort(
+      (a, b) =>
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    )
+    .slice(0, 5);
+
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="animate-pulse">
+            <div className="h-8 bg-gray-300 rounded mb-4"></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="h-32 bg-gray-300 rounded"></div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>

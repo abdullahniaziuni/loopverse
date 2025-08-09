@@ -58,18 +58,31 @@ export const Signup: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("🚀 Signup.handleSubmit - Form submitted");
+    console.log("📝 Form data:", formData);
 
-    if (!validateForm()) return;
+    if (!validateForm()) {
+      console.log("❌ Signup.handleSubmit - Form validation failed");
+      return;
+    }
 
+    console.log("✅ Signup.handleSubmit - Form validation passed");
     setIsLoading(true);
+
     try {
+      console.log("📝 Signup.handleSubmit - Calling signup function");
       await signup(formData);
+      console.log("✅ Signup.handleSubmit - Signup successful");
       showSuccess("Account created successfully!");
+
+      console.log("🧭 Signup.handleSubmit - Navigating to /dashboard");
       navigate("/dashboard");
     } catch (error) {
+      console.error("💥 Signup.handleSubmit - Signup error:", error);
       showError(error instanceof Error ? error.message : "Signup failed");
     } finally {
       setIsLoading(false);
+      console.log("⏳ Signup.handleSubmit - Set loading to false");
     }
   };
 

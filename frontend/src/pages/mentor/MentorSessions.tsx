@@ -1,18 +1,19 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { 
-  Calendar, 
-  Clock, 
-  User, 
-  Video, 
-  MessageSquare, 
+import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import {
+  Calendar,
+  Clock,
+  User,
+  Video,
+  MessageSquare,
   Star,
   Filter,
   Search,
-  ChevronRight
-} from 'lucide-react';
-import { Layout } from '../../components/layout/Layout';
-import { Button, Input } from '../../components/ui';
+  ChevronRight,
+} from "lucide-react";
+import { Layout } from "../../components/layout/Layout";
+import { Button, Input } from "../../components/ui";
+import { apiService } from "../../services/api";
 
 interface Session {
   id: string;
@@ -22,88 +23,75 @@ interface Session {
   date: string;
   time: string;
   duration: number;
-  status: 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
-  type: 'video' | 'chat';
+  status: "upcoming" | "ongoing" | "completed" | "cancelled";
+  type: "video" | "chat";
   rating?: number;
   feedback?: string;
 }
 
-const mockSessions: Session[] = [
-  {
-    id: '1',
-    learnerName: 'Alice Johnson',
-    topic: 'React Hooks Deep Dive',
-    date: '2024-01-15',
-    time: '10:00 AM',
-    duration: 60,
-    status: 'upcoming',
-    type: 'video'
-  },
-  {
-    id: '2',
-    learnerName: 'Bob Smith',
-    topic: 'JavaScript Fundamentals',
-    date: '2024-01-14',
-    time: '2:00 PM',
-    duration: 45,
-    status: 'completed',
-    type: 'video',
-    rating: 5,
-    feedback: 'Excellent session! Very helpful explanations.'
-  },
-  {
-    id: '3',
-    learnerName: 'Carol Davis',
-    topic: 'Node.js Best Practices',
-    date: '2024-01-13',
-    time: '11:00 AM',
-    duration: 90,
-    status: 'completed',
-    type: 'video',
-    rating: 4,
-    feedback: 'Good session, learned a lot about async patterns.'
-  },
-  {
-    id: '4',
-    learnerName: 'David Wilson',
-    topic: 'Database Design',
-    date: '2024-01-12',
-    time: '3:00 PM',
-    duration: 60,
-    status: 'cancelled',
-    type: 'video'
-  }
-];
+// Mock sessions removed - now using real API data
 
 export const MentorSessions: React.FC = () => {
-  const [sessions] = useState<Session[]>(mockSessions);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const filteredSessions = sessions.filter(session => {
-    const matchesSearch = session.learnerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         session.topic.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || session.status === statusFilter;
+  // Fetch mentor sessions
+  useEffect(() => {
+    const fetchSessions = async () => {
+      try {
+        setIsLoading(true);
+        const response = await apiService.getMentorSessions();
+        if (response.success && response.data) {
+          setSessions(response.data);
+        }
+      } catch (error) {
+        console.error("Error fetching sessions:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchSessions();
+  }, []);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+
+  const filteredSessions = sessions.filter((session) => {
+    const matchesSearch =
+      session.learnerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      session.topic.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus =
+      statusFilter === "all" || session.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
-  const getStatusColor = (status: Session['status']) => {
+  const getStatusColor = (status: Session["status"]) => {
     switch (status) {
-      case 'upcoming': return 'bg-blue-100 text-blue-800';
-      case 'ongoing': return 'bg-green-100 text-green-800';
-      case 'completed': return 'bg-gray-100 text-gray-800';
-      case 'cancelled': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case "upcoming":
+        return "bg-blue-100 text-blue-800";
+      case "ongoing":
+        return "bg-green-100 text-green-800";
+      case "completed":
+        return "bg-gray-100 text-gray-800";
+      case "cancelled":
+        return "bg-red-100 text-red-800";
+      default:
+        return "bg-gray-100 text-gray-800";
     }
   };
 
-  const getStatusIcon = (status: Session['status']) => {
+  const getStatusIcon = (status: Session["status"]) => {
     switch (status) {
-      case 'upcoming': return <Calendar className="h-4 w-4" />;
-      case 'ongoing': return <Video className="h-4 w-4" />;
-      case 'completed': return <Star className="h-4 w-4" />;
-      case 'cancelled': return <Clock className="h-4 w-4" />;
-      default: return <Calendar className="h-4 w-4" />;
+      case "upcoming":
+        return <Calendar className="h-4 w-4" />;
+      case "ongoing":
+        return <Video className="h-4 w-4" />;
+      case "completed":
+        return <Star className="h-4 w-4" />;
+      case "cancelled":
+        return <Clock className="h-4 w-4" />;
+      default:
+        return <Calendar className="h-4 w-4" />;
     }
   };
 
@@ -154,11 +142,13 @@ export const MentorSessions: React.FC = () => {
           {filteredSessions.length === 0 ? (
             <div className="bg-white rounded-xl p-12 shadow-sm border border-gray-100 text-center">
               <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No sessions found</h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                No sessions found
+              </h3>
               <p className="text-gray-600">
-                {searchTerm || statusFilter !== 'all' 
-                  ? 'Try adjusting your search or filters.'
-                  : 'You don\'t have any sessions yet.'}
+                {searchTerm || statusFilter !== "all"
+                  ? "Try adjusting your search or filters."
+                  : "You don't have any sessions yet."}
               </p>
             </div>
           ) : (
@@ -186,9 +176,15 @@ export const MentorSessions: React.FC = () => {
                         <h3 className="text-lg font-semibold text-gray-900 truncate">
                           {session.topic}
                         </h3>
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(session.status)}`}>
+                        <span
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
+                            session.status
+                          )}`}
+                        >
                           {getStatusIcon(session.status)}
-                          <span className="ml-1 capitalize">{session.status}</span>
+                          <span className="ml-1 capitalize">
+                            {session.status}
+                          </span>
                         </span>
                       </div>
                       <div className="flex items-center space-x-4 mt-1 text-sm text-gray-600">
@@ -198,14 +194,18 @@ export const MentorSessions: React.FC = () => {
                         </div>
                         <div className="flex items-center space-x-1">
                           <Calendar className="h-4 w-4" />
-                          <span>{new Date(session.date).toLocaleDateString()}</span>
+                          <span>
+                            {new Date(session.date).toLocaleDateString()}
+                          </span>
                         </div>
                         <div className="flex items-center space-x-1">
                           <Clock className="h-4 w-4" />
-                          <span>{session.time} ({session.duration} min)</span>
+                          <span>
+                            {session.time} ({session.duration} min)
+                          </span>
                         </div>
                         <div className="flex items-center space-x-1">
-                          {session.type === 'video' ? (
+                          {session.type === "video" ? (
                             <Video className="h-4 w-4" />
                           ) : (
                             <MessageSquare className="h-4 w-4" />
@@ -220,12 +220,16 @@ export const MentorSessions: React.FC = () => {
                               <Star
                                 key={i}
                                 className={`h-4 w-4 ${
-                                  i < session.rating! ? 'text-yellow-400 fill-current' : 'text-gray-300'
+                                  i < session.rating!
+                                    ? "text-yellow-400 fill-current"
+                                    : "text-gray-300"
                                 }`}
                               />
                             ))}
                           </div>
-                          <span className="text-sm text-gray-600">({session.rating}/5)</span>
+                          <span className="text-sm text-gray-600">
+                            ({session.rating}/5)
+                          </span>
                         </div>
                       )}
                       {session.feedback && (
@@ -236,7 +240,7 @@ export const MentorSessions: React.FC = () => {
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
-                    {session.status === 'upcoming' && (
+                    {session.status === "upcoming" && (
                       <Link to={`/video-call/${session.id}`}>
                         <Button size="sm">
                           <Video className="h-4 w-4 mr-2" />
@@ -244,9 +248,12 @@ export const MentorSessions: React.FC = () => {
                         </Button>
                       </Link>
                     )}
-                    {session.status === 'ongoing' && (
+                    {session.status === "ongoing" && (
                       <Link to={`/video-call/${session.id}`}>
-                        <Button size="sm" className="bg-green-600 hover:bg-green-700">
+                        <Button
+                          size="sm"
+                          className="bg-green-600 hover:bg-green-700"
+                        >
                           <Video className="h-4 w-4 mr-2" />
                           Rejoin
                         </Button>
@@ -270,8 +277,12 @@ export const MentorSessions: React.FC = () => {
                 <Calendar className="h-6 w-6 text-white" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Sessions</p>
-                <p className="text-2xl font-bold text-gray-900">{sessions.length}</p>
+                <p className="text-sm font-medium text-gray-600">
+                  Total Sessions
+                </p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {sessions.length}
+                </p>
               </div>
             </div>
           </div>
@@ -283,7 +294,7 @@ export const MentorSessions: React.FC = () => {
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Completed</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {sessions.filter(s => s.status === 'completed').length}
+                  {sessions.filter((s) => s.status === "completed").length}
                 </p>
               </div>
             </div>
@@ -296,8 +307,12 @@ export const MentorSessions: React.FC = () => {
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Avg Rating</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {(sessions.filter(s => s.rating).reduce((acc, s) => acc + (s.rating || 0), 0) / 
-                    sessions.filter(s => s.rating).length || 0).toFixed(1)}
+                  {(
+                    sessions
+                      .filter((s) => s.rating)
+                      .reduce((acc, s) => acc + (s.rating || 0), 0) /
+                      sessions.filter((s) => s.rating).length || 0
+                  ).toFixed(1)}
                 </p>
               </div>
             </div>
@@ -308,9 +323,11 @@ export const MentorSessions: React.FC = () => {
                 <User className="h-6 w-6 text-white" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Unique Learners</p>
+                <p className="text-sm font-medium text-gray-600">
+                  Unique Learners
+                </p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {new Set(sessions.map(s => s.learnerName)).size}
+                  {new Set(sessions.map((s) => s.learnerName)).size}
                 </p>
               </div>
             </div>

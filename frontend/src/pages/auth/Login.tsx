@@ -36,20 +36,32 @@ export const Login: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("🚀 Login.handleSubmit - Form submitted");
+    console.log("📧 Email:", formData.email);
 
-    if (!validateForm()) return;
+    if (!validateForm()) {
+      console.log("❌ Login.handleSubmit - Form validation failed");
+      return;
+    }
 
+    console.log("✅ Login.handleSubmit - Form validation passed");
     setIsLoading(true);
+
     try {
+      console.log("🔐 Login.handleSubmit - Calling login function");
       await login(formData.email, formData.password);
+      console.log("✅ Login.handleSubmit - Login successful");
       showSuccess("Login successful!");
 
+      console.log("🧭 Login.handleSubmit - Navigating to /dashboard");
       // Navigate based on role (will be handled by the router)
       navigate("/dashboard");
     } catch (error) {
+      console.error("💥 Login.handleSubmit - Login error:", error);
       showError(error instanceof Error ? error.message : "Login failed");
     } finally {
       setIsLoading(false);
+      console.log("⏳ Login.handleSubmit - Set loading to false");
     }
   };
 

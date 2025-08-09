@@ -1,12 +1,19 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User, AuthContextType, SignupForm } from '../types';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
+import { User, AuthContextType, SignupForm } from "../types";
+import { apiService } from "../services/api";
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };
@@ -20,88 +27,161 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check for stored user session on app load
-    const storedUser = localStorage.getItem('skillsphere_user');
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (error) {
-        console.error('Error parsing stored user:', error);
-        localStorage.removeItem('skillsphere_user');
+    // Check for stored user session and token on app load
+    const initializeAuth = async () => {
+      const storedUser = localStorage.getItem("skillsphere_user");
+      const storedToken = localStorage.getItem("auth_token");
+
+      if (storedUser && storedToken) {
+        try {
+          const parsedUser = JSON.parse(storedUser);
+          apiService.setToken(storedToken);
+
+          // Verify token is still valid by fetching current user
+          const response = await apiService.getCurrentUser();
+          if (response.success && response.data) {
+            setUser(response.data);
+          } else {
+            // Token is invalid, clear stored data
+            localStorage.removeItem("skillsphere_user");
+            localStorage.removeItem("auth_token");
+            apiService.clearToken();
+          }
+        } catch (error) {
+          console.error("Error validating stored session:", error);
+          localStorage.removeItem("skillsphere_user");
+          localStorage.removeItem("auth_token");
+          apiService.clearToken();
+        }
       }
-    }
-    setIsLoading(false);
+      setIsLoading(false);
+    };
+
+    initializeAuth();
   }, []);
 
   const login = async (email: string, password: string): Promise<void> => {
-    setIsLoading(true);
-    try {
-      // Mock login - in real app, this would be an API call
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API delay
-      
-      // Mock user data based on email for demo
-      let mockUser: User;
-      if (email.includes('admin')) {
-        mockUser = {
-          id: '1',
-          name: 'Admin User',
-          email,
-          role: 'admin',
-          createdAt: new Date().toISOString(),
-        };
-      } else if (email.includes('mentor')) {
-        mockUser = {
-          id: '2',
-          name: 'John Mentor',
-          email,
-          role: 'mentor',
-          createdAt: new Date().toISOString(),
-        };
-      } else {
-        mockUser = {
-          id: '3',
-          name: 'Jane Learner',
-          email,
-          role: 'learner',
-          createdAt: new Date().toISOString(),
-        };
-      }
+    console.log("🔐 AuthContext.login - Starting login process");
+    console.log("📧 Email:", email);
+    console.log("🔑 Password length:", password.length);
 
-      setUser(mockUser);
-      localStorage.setItem('skillsphere_user', JSON.stringify(mockUser));
+    setIsLoading(true);
+    console.log("⏳ AuthContext.login - Set loading to true");
+
+    try {
+      console.log("📡 AuthContext.login - Calling apiService.login");
+      const response = await apiService.login({ email, password });
+      console.log("📡 AuthContext.login - API response:", response);
+
+      if (response.success && response.data) {
+        const { user, token } = response.data;
+        console.log("✅ AuthContext.login - Login successful");
+        console.log("🎫 Token received:", token ? "YES" : "NO");
+        console.log("👤 User data:", user);
+        console.log("🏷️ User role:", user.role);
+        console.log("📧 User email:", user.email);
+        console.log("🆔 User ID:", user.id);
+
+        apiService.setToken(token);
+        console.log("🔑 AuthContext.login - Token set in apiService");
+
+        setUser(user);
+        console.log("👤 AuthContext.login - User set in context");
+
+        localStorage.setItem("skillsphere_user", JSON.stringify(user));
+        localStorage.setItem("auth_token", token);
+        console.log("💾 AuthContext.login - Data saved to localStorage");
+      } else {
+        console.error("❌ AuthContext.login - Login failed");
+        console.error("📄 Response:", response);
+        throw new Error(response.error || "Login failed");
+      }
     } catch (error) {
-      throw new Error('Login failed. Please check your credentials.');
+      console.error("💥 AuthContext.login - Login error:", error);
+      throw new Error(
+        error instanceof Error
+          ? error.message
+          : "Login failed. Please check your credentials."
+      );
     } finally {
       setIsLoading(false);
+      console.log("⏳ AuthContext.login - Set loading to false");
     }
   };
 
   const signup = async (data: SignupForm): Promise<void> => {
+    console.log("🔐 AuthContext.signup - Starting signup process");
+    console.log("📝 Signup data:", data);
+
     setIsLoading(true);
+    console.log("⏳ AuthContext.signup - Set loading to true");
+
     try {
-      // Mock signup - in real app, this would be an API call
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API delay
-      
-      const mockUser: User = {
-        id: Date.now().toString(),
-        name: data.name,
+      console.log("📡 AuthContext.signup - Calling apiService.signup");
+
+      // Split name into firstName and lastName
+      const nameParts = data.name.trim().split(" ");
+      const firstName = nameParts[0] || "";
+      const lastName = nameParts.slice(1).join(" ") || "";
+
+      const signupData = {
+        firstName,
+        lastName,
         email: data.email,
+        password: data.password,
         role: data.role,
-        createdAt: new Date().toISOString(),
       };
 
-      setUser(mockUser);
-      localStorage.setItem('skillsphere_user', JSON.stringify(mockUser));
+      console.log("📝 Transformed signup data:", signupData);
+
+      const response = await apiService.signup(signupData);
+      console.log("📡 AuthContext.signup - API response:", response);
+
+      if (response.success && response.data) {
+        const { user, token } = response.data;
+        console.log("✅ AuthContext.signup - Signup successful");
+        console.log("🎫 Token received:", token ? "YES" : "NO");
+        console.log("👤 User data:", user);
+        console.log("🏷️ User role:", user.role);
+
+        apiService.setToken(token);
+        console.log("🔑 AuthContext.signup - Token set in apiService");
+
+        setUser(user);
+        console.log("👤 AuthContext.signup - User set in context");
+
+        localStorage.setItem("skillsphere_user", JSON.stringify(user));
+        localStorage.setItem("auth_token", token);
+        console.log("💾 AuthContext.signup - Data saved to localStorage");
+      } else {
+        console.error("❌ AuthContext.signup - Signup failed");
+        console.error("📄 Response:", response);
+        throw new Error(response.error || "Signup failed");
+      }
     } catch (error) {
-      throw new Error('Signup failed. Please try again.');
+      console.error("💥 AuthContext.signup - Signup error:", error);
+      throw new Error(
+        error instanceof Error
+          ? error.message
+          : "Signup failed. Please try again."
+      );
     } finally {
       setIsLoading(false);
+      console.log("⏳ AuthContext.signup - Set loading to false");
     }
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('skillsphere_user');
+  const logout = async () => {
+    try {
+      await apiService.logout();
+    } catch (error) {
+      console.error("Logout error:", error);
+    } finally {
+      setUser(null);
+      apiService.clearToken();
+      localStorage.removeItem("skillsphere_user");
+      localStorage.removeItem("auth_token");
+    }
   };
 
   const value: AuthContextType = {
@@ -112,9 +192,5 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isLoading,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

@@ -23,12 +23,14 @@ import { MentorDashboard } from "./pages/mentor/Dashboard";
 import { Availability } from "./pages/mentor/Availability";
 import { BookingRequests } from "./pages/mentor/BookingRequests";
 import { MentorSessions } from "./pages/mentor/MentorSessions";
+import { Messages } from "./pages/mentor/Messages";
 import { AdminDashboard } from "./pages/admin/Dashboard";
 import { MentorApprovals } from "./pages/admin/MentorApprovals";
 import { FeedbackManagement } from "./pages/admin/FeedbackManagement";
 import { VideoCall } from "./pages/VideoCall";
 import { Settings } from "./pages/Settings";
 import { NotFound } from "./pages/NotFound";
+import { SessionRoom } from "./pages/SessionRoom";
 
 function App() {
   return (
@@ -135,6 +137,14 @@ function App() {
             }
           />
           <Route
+            path="/mentor/messages"
+            element={
+              <ProtectedRoute allowedRoles={["mentor"]}>
+                <Messages />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/admin/dashboard"
             element={
               <ProtectedRoute allowedRoles={["admin"]}>
@@ -171,6 +181,14 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={["learner", "mentor", "admin"]}>
                 <Settings />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/session/:sessionId"
+            element={
+              <ProtectedRoute allowedRoles={["learner", "mentor"]}>
+                <SessionRoom />
               </ProtectedRoute>
             }
           />

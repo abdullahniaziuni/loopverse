@@ -1,9 +1,19 @@
-import React, { useState } from 'react';
-import { Clock, User, MessageCircle, Check, X, Calendar } from 'lucide-react';
-import { Layout } from '../../components/layout';
-import { Button, Modal, Textarea } from '../../components/ui';
-import { useToast } from '../../hooks/useToast';
-import { formatDate, formatTime } from '../../utils';
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  Clock,
+  User,
+  MessageCircle,
+  Check,
+  X,
+  Calendar,
+  Video,
+} from "lucide-react";
+import { Layout } from "../../components/layout";
+import { Button, Modal, Textarea } from "../../components/ui";
+import { useToast } from "../../hooks/useToast";
+import { formatDate, formatTime } from "../../utils";
+import { apiService } from "../../services/api";
 
 interface BookingRequest {
   id: string;
@@ -14,61 +24,69 @@ interface BookingRequest {
   startTime: string;
   endTime: string;
   message?: string;
-  status: 'pending' | 'accepted' | 'rejected';
+  status: "pending" | "accepted" | "rejected";
   createdAt: string;
 }
 
 export const BookingRequests: React.FC = () => {
-  const [requests, setRequests] = useState<BookingRequest[]>([
-    {
-      id: '1',
-      learnerId: '1',
-      learnerName: 'Alice Johnson',
-      date: '2024-08-16',
-      startTime: '14:00',
-      endTime: '15:00',
-      message: 'Hi! I would love to learn about React hooks and state management. I have some basic knowledge but want to dive deeper into advanced patterns.',
-      status: 'pending',
-      createdAt: '2024-08-14T10:00:00Z',
-    },
-    {
-      id: '2',
-      learnerId: '2',
-      learnerName: 'Bob Smith',
-      date: '2024-08-17',
-      startTime: '10:00',
-      endTime: '11:00',
-      message: 'Looking for help with TypeScript and advanced patterns. I\'m working on a large project and need guidance on best practices.',
-      status: 'pending',
-      createdAt: '2024-08-14T12:00:00Z',
-    },
-    {
-      id: '3',
-      learnerId: '3',
-      learnerName: 'Carol Davis',
-      date: '2024-08-15',
-      startTime: '16:00',
-      endTime: '17:00',
-      message: 'Need help with Node.js backend development and API design.',
-      status: 'accepted',
-      createdAt: '2024-08-13T15:00:00Z',
-    },
-  ]);
-
-  const [selectedRequest, setSelectedRequest] = useState<BookingRequest | null>(null);
-  const [actionType, setActionType] = useState<'accept' | 'reject' | null>(null);
-  const [responseMessage, setResponseMessage] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
+  const navigate = useNavigate();
+  const [requests, setRequests] = useState<BookingRequest[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const { success: showSuccess, error: showError } = useToast();
 
-  const pendingRequests = requests.filter(r => r.status === 'pending');
-  const processedRequests = requests.filter(r => r.status !== 'pending');
+  // Fetch pending booking requests
+  useEffect(() => {
+    const fetchPendingBookings = async () => {
+      try {
+        console.log("📋 BookingRequests - Fetching pending bookings");
+        setIsLoading(true);
 
-  const handleAction = (request: BookingRequest, action: 'accept' | 'reject') => {
+        const response = await apiService.getPendingBookings();
+        console.log("📋 BookingRequests - API response:", response);
+
+        if (response.success && response.data) {
+          console.log(
+            "✅ BookingRequests - Bookings fetched successfully:",
+            response.data
+          );
+          setRequests(response.data);
+        } else {
+          console.log(
+            "❌ BookingRequests - No bookings data or failed response"
+          );
+          console.log("📄 Response details:", response);
+        }
+      } catch (error) {
+        console.error("💥 BookingRequests - Error fetching bookings:", error);
+        showError("Failed to fetch booking requests");
+      } finally {
+        setIsLoading(false);
+        console.log("⏳ BookingRequests - Set loading to false");
+      }
+    };
+
+    fetchPendingBookings();
+  }, []);
+
+  const [selectedRequest, setSelectedRequest] = useState<BookingRequest | null>(
+    null
+  );
+  const [actionType, setActionType] = useState<"accept" | "reject" | null>(
+    null
+  );
+  const [responseMessage, setResponseMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const pendingRequests = requests.filter((r) => r.status === "pending");
+  const processedRequests = requests.filter((r) => r.status !== "pending");
+
+  const handleAction = (
+    request: BookingRequest,
+    action: "accept" | "reject"
+  ) => {
     setSelectedRequest(request);
     setActionType(action);
-    setResponseMessage('');
+    setResponseMessage("");
   };
 
   const submitResponse = async () => {
@@ -76,29 +94,60 @@ export const BookingRequests: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      // Mock API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      setRequests(prev => prev.map(request => 
-        request.id === selectedRequest.id 
-          ? { ...request, status: actionType === 'accept' ? 'accepted' : 'rejected' }
-          : request
-      ));
+      console.log("📋 BookingRequests - Submitting response:", {
+        requestId: selectedRequest.id,
+        action: actionType,
+        message: responseMessage,
+      });
 
-      showSuccess(
-        actionType === 'accept' 
-          ? 'Booking request accepted! The learner will be notified.'
-          : 'Booking request declined. The learner will be notified.'
+      const response = await apiService.respondToBooking(
+        selectedRequest.id,
+        actionType,
+        responseMessage
       );
-      
-      setSelectedRequest(null);
-      setActionType(null);
-      setResponseMessage('');
+
+      console.log("📋 BookingRequests - Response result:", response);
+
+      if (response.success) {
+        // Update the local state
+        setRequests((prev) =>
+          prev.map((request) =>
+            request.id === selectedRequest.id
+              ? {
+                  ...request,
+                  status: actionType === "accept" ? "accepted" : "rejected",
+                }
+              : request
+          )
+        );
+
+        showSuccess(
+          actionType === "accept"
+            ? "Booking request accepted! The learner will be notified."
+            : "Booking request declined. The learner will be notified."
+        );
+
+        setSelectedRequest(null);
+        setActionType(null);
+        setResponseMessage("");
+      } else {
+        showError(response.error || "Failed to process request");
+      }
     } catch (error) {
-      showError('Failed to process request. Please try again.');
+      console.error("💥 BookingRequests - Error submitting response:", error);
+      showError("Failed to process request. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleStartSession = (request: BookingRequest) => {
+    console.log(
+      "🎯 BookingRequests - Starting session for request:",
+      request.id
+    );
+    showSuccess("Starting session...");
+    navigate(`/session/${request.id}`);
   };
 
   return (
@@ -115,18 +164,20 @@ export const BookingRequests: React.FC = () => {
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="bg-white rounded-lg shadow p-6">
-            <div className="text-2xl font-bold text-gray-900">{pendingRequests.length}</div>
+            <div className="text-2xl font-bold text-gray-900">
+              {pendingRequests.length}
+            </div>
             <div className="text-sm text-gray-600">Pending Requests</div>
           </div>
           <div className="bg-white rounded-lg shadow p-6">
             <div className="text-2xl font-bold text-gray-900">
-              {requests.filter(r => r.status === 'accepted').length}
+              {requests.filter((r) => r.status === "accepted").length}
             </div>
             <div className="text-sm text-gray-600">Accepted</div>
           </div>
           <div className="bg-white rounded-lg shadow p-6">
             <div className="text-2xl font-bold text-gray-900">
-              {requests.filter(r => r.status === 'rejected').length}
+              {requests.filter((r) => r.status === "rejected").length}
             </div>
             <div className="text-sm text-gray-600">Declined</div>
           </div>
@@ -151,8 +202,8 @@ export const BookingRequests: React.FC = () => {
                   <RequestCard
                     key={request.id}
                     request={request}
-                    onAccept={() => handleAction(request, 'accept')}
-                    onReject={() => handleAction(request, 'reject')}
+                    onAccept={() => handleAction(request, "accept")}
+                    onReject={() => handleAction(request, "reject")}
                     isPending={true}
                   />
                 ))}
@@ -175,7 +226,9 @@ export const BookingRequests: React.FC = () => {
         {processedRequests.length > 0 && (
           <div className="bg-white rounded-lg shadow">
             <div className="p-6 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">Recent Activity</h2>
+              <h2 className="text-lg font-semibold text-gray-900">
+                Recent Activity
+              </h2>
             </div>
             <div className="p-6">
               <div className="space-y-6">
@@ -198,17 +251,25 @@ export const BookingRequests: React.FC = () => {
         onClose={() => {
           setSelectedRequest(null);
           setActionType(null);
-          setResponseMessage('');
+          setResponseMessage("");
         }}
-        title={actionType === 'accept' ? 'Accept Booking Request' : 'Decline Booking Request'}
+        title={
+          actionType === "accept"
+            ? "Accept Booking Request"
+            : "Decline Booking Request"
+        }
       >
         {selectedRequest && (
           <div>
             <div className="mb-6">
               <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                <h4 className="font-medium text-gray-900">{selectedRequest.learnerName}</h4>
+                <h4 className="font-medium text-gray-900">
+                  {selectedRequest.learnerName}
+                </h4>
                 <p className="text-sm text-gray-600">
-                  {formatDate(selectedRequest.date)} at {formatTime(selectedRequest.startTime)} - {formatTime(selectedRequest.endTime)}
+                  {formatDate(selectedRequest.date)} at{" "}
+                  {formatTime(selectedRequest.startTime)} -{" "}
+                  {formatTime(selectedRequest.endTime)}
                 </p>
                 {selectedRequest.message && (
                   <p className="text-sm text-gray-700 mt-2 italic">
@@ -220,7 +281,7 @@ export const BookingRequests: React.FC = () => {
               <Textarea
                 label={`Message to learner (optional)`}
                 placeholder={
-                  actionType === 'accept' 
+                  actionType === "accept"
                     ? "Looking forward to our session! Please let me know if you have any specific topics you'd like to focus on."
                     : "Thank you for your interest. Unfortunately, I'm not available at this time. Please check my other available slots."
                 }
@@ -229,7 +290,7 @@ export const BookingRequests: React.FC = () => {
                 rows={3}
               />
             </div>
-            
+
             <div className="flex space-x-3">
               <Button
                 variant="outline"
@@ -237,7 +298,7 @@ export const BookingRequests: React.FC = () => {
                 onClick={() => {
                   setSelectedRequest(null);
                   setActionType(null);
-                  setResponseMessage('');
+                  setResponseMessage("");
                 }}
               >
                 Cancel
@@ -246,9 +307,9 @@ export const BookingRequests: React.FC = () => {
                 className="flex-1"
                 onClick={submitResponse}
                 isLoading={isSubmitting}
-                variant={actionType === 'accept' ? 'primary' : 'danger'}
+                variant={actionType === "accept" ? "primary" : "danger"}
               >
-                {actionType === 'accept' ? 'Accept Request' : 'Decline Request'}
+                {actionType === "accept" ? "Accept Request" : "Decline Request"}
               </Button>
             </div>
           </div>
@@ -265,20 +326,20 @@ interface RequestCardProps {
   isPending: boolean;
 }
 
-const RequestCard: React.FC<RequestCardProps> = ({ 
-  request, 
-  onAccept, 
-  onReject, 
-  isPending 
+const RequestCard: React.FC<RequestCardProps> = ({
+  request,
+  onAccept,
+  onReject,
+  isPending,
 }) => {
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'accepted':
-        return 'bg-green-100 text-green-800';
-      case 'rejected':
-        return 'bg-red-100 text-red-800';
+      case "accepted":
+        return "bg-green-100 text-green-800";
+      case "rejected":
+        return "bg-red-100 text-red-800";
       default:
-        return 'bg-yellow-100 text-yellow-800';
+        return "bg-yellow-100 text-yellow-800";
     }
   };
 
@@ -290,7 +351,12 @@ const RequestCard: React.FC<RequestCardProps> = ({
             <div className="flex items-center">
               <img
                 className="h-10 w-10 rounded-full object-cover"
-                src={request.learnerAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(request.learnerName)}&background=3B82F6&color=fff`}
+                src={
+                  request.learnerAvatar ||
+                  `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                    request.learnerName
+                  )}&background=3B82F6&color=fff`
+                }
                 alt={request.learnerName}
               />
               <div className="ml-3">
@@ -302,19 +368,25 @@ const RequestCard: React.FC<RequestCardProps> = ({
                 </p>
               </div>
             </div>
-            <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(request.status)}`}>
+            <span
+              className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
+                request.status
+              )}`}
+            >
               {request.status}
             </span>
           </div>
-          
+
           <div className="flex items-center text-gray-600 mb-2">
             <Calendar className="h-4 w-4 mr-2" />
             <span>{formatDate(request.date)}</span>
           </div>
-          
+
           <div className="flex items-center text-gray-600 mb-3">
             <Clock className="h-4 w-4 mr-2" />
-            <span>{formatTime(request.startTime)} - {formatTime(request.endTime)}</span>
+            <span>
+              {formatTime(request.startTime)} - {formatTime(request.endTime)}
+            </span>
           </div>
 
           {request.message && (
@@ -329,11 +401,7 @@ const RequestCard: React.FC<RequestCardProps> = ({
 
         {isPending && onAccept && onReject && (
           <div className="flex space-x-2 ml-6">
-            <Button
-              size="sm"
-              onClick={onAccept}
-              className="flex items-center"
-            >
+            <Button size="sm" onClick={onAccept} className="flex items-center">
               <Check className="h-4 w-4 mr-1" />
               Accept
             </Button>

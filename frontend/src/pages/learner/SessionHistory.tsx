@@ -1,27 +1,35 @@
-import React, { useState } from 'react';
-import { Calendar, Clock, User, Star, MessageCircle, Download } from 'lucide-react';
-import { Layout } from '../../components/layout';
-import { Button, Modal, Textarea } from '../../components/ui';
-import { generateMockSessions, formatDate, formatTime } from '../../utils';
-import { useToast } from '../../hooks/useToast';
-import { Session } from '../../types';
+import React, { useState, useEffect } from "react";
+import {
+  Calendar,
+  Clock,
+  User,
+  Star,
+  MessageCircle,
+  Download,
+} from "lucide-react";
+import { Layout } from "../../components/layout";
+import { Button, Modal, Textarea } from "../../components/ui";
+import { formatDate, formatTime } from "../../utils";
+import { useToast } from "../../hooks/useToast";
+import { Session } from "../../types";
+import { apiService } from "../../services/api";
 
 export const SessionHistory: React.FC = () => {
   const [feedbackSession, setFeedbackSession] = useState<Session | null>(null);
   const [rating, setRating] = useState(0);
-  const [comment, setComment] = useState('');
+  const [comment, setComment] = useState("");
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
-  
+
   const { success: showSuccess } = useToast();
-  
-  const completedSessions = generateMockSessions().filter(session => 
-    session.status === 'completed'
+
+  const completedSessions = generateMockSessions().filter(
+    (session) => session.status === "completed"
   );
 
   const handleLeaveFeedback = (session: Session) => {
     setFeedbackSession(session);
     setRating(session.feedback?.rating || 0);
-    setComment(session.feedback?.comment || '');
+    setComment(session.feedback?.comment || "");
   };
 
   const submitFeedback = async () => {
@@ -32,12 +40,12 @@ export const SessionHistory: React.FC = () => {
     setIsSubmittingFeedback(true);
     try {
       // Mock API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      showSuccess('Feedback submitted successfully!');
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      showSuccess("Feedback submitted successfully!");
       setFeedbackSession(null);
       setRating(0);
-      setComment('');
+      setComment("");
     } catch (error) {
       // Error handling would go here
     } finally {
@@ -47,7 +55,7 @@ export const SessionHistory: React.FC = () => {
 
   const downloadNotes = (session: Session) => {
     // Mock download functionality
-    showSuccess('Session notes downloaded successfully!');
+    showSuccess("Session notes downloaded successfully!");
   };
 
   return (
@@ -64,16 +72,20 @@ export const SessionHistory: React.FC = () => {
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="bg-white rounded-lg shadow p-6">
-            <div className="text-2xl font-bold text-gray-900">{completedSessions.length}</div>
+            <div className="text-2xl font-bold text-gray-900">
+              {completedSessions.length}
+            </div>
             <div className="text-sm text-gray-600">Total Sessions</div>
           </div>
           <div className="bg-white rounded-lg shadow p-6">
-            <div className="text-2xl font-bold text-gray-900">{completedSessions.length}</div>
+            <div className="text-2xl font-bold text-gray-900">
+              {completedSessions.length}
+            </div>
             <div className="text-sm text-gray-600">Hours Learned</div>
           </div>
           <div className="bg-white rounded-lg shadow p-6">
             <div className="text-2xl font-bold text-gray-900">
-              {completedSessions.filter(s => s.feedback).length}
+              {completedSessions.filter((s) => s.feedback).length}
             </div>
             <div className="text-sm text-gray-600">Feedback Given</div>
           </div>
@@ -122,10 +134,15 @@ export const SessionHistory: React.FC = () => {
           <div>
             <div className="mb-6">
               <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                <h4 className="font-medium text-gray-900">{feedbackSession.topic}</h4>
-                <p className="text-sm text-gray-600">with {feedbackSession.mentorName}</p>
+                <h4 className="font-medium text-gray-900">
+                  {feedbackSession.topic}
+                </h4>
                 <p className="text-sm text-gray-600">
-                  {formatDate(feedbackSession.date)} at {formatTime(feedbackSession.startTime)}
+                  with {feedbackSession.mentorName}
+                </p>
+                <p className="text-sm text-gray-600">
+                  {formatDate(feedbackSession.date)} at{" "}
+                  {formatTime(feedbackSession.startTime)}
                 </p>
               </div>
 
@@ -140,7 +157,7 @@ export const SessionHistory: React.FC = () => {
                       key={star}
                       onClick={() => setRating(star)}
                       className={`p-1 ${
-                        star <= rating ? 'text-yellow-400' : 'text-gray-300'
+                        star <= rating ? "text-yellow-400" : "text-gray-300"
                       } hover:text-yellow-400 transition-colors`}
                     >
                       <Star className="h-6 w-6 fill-current" />
@@ -160,7 +177,7 @@ export const SessionHistory: React.FC = () => {
                 />
               </div>
             </div>
-            
+
             <div className="flex space-x-3">
               <Button
                 variant="outline"
@@ -191,10 +208,10 @@ interface SessionCardProps {
   onDownloadNotes: (session: Session) => void;
 }
 
-const SessionCard: React.FC<SessionCardProps> = ({ 
-  session, 
-  onLeaveFeedback, 
-  onDownloadNotes 
+const SessionCard: React.FC<SessionCardProps> = ({
+  session,
+  onLeaveFeedback,
+  onDownloadNotes,
 }) => {
   return (
     <div className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
@@ -202,32 +219,36 @@ const SessionCard: React.FC<SessionCardProps> = ({
         <div className="flex-1">
           <div className="flex items-center space-x-3 mb-2">
             <h3 className="text-lg font-semibold text-gray-900">
-              {session.topic || 'Mentoring Session'}
+              {session.topic || "Mentoring Session"}
             </h3>
             <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
               Completed
             </span>
           </div>
-          
+
           <div className="flex items-center text-gray-600 mb-2">
             <User className="h-4 w-4 mr-2" />
             <span>with {session.mentorName}</span>
           </div>
-          
+
           <div className="flex items-center text-gray-600 mb-2">
             <Calendar className="h-4 w-4 mr-2" />
             <span>{formatDate(session.date)}</span>
           </div>
-          
+
           <div className="flex items-center text-gray-600 mb-3">
             <Clock className="h-4 w-4 mr-2" />
-            <span>{formatTime(session.startTime)} - {formatTime(session.endTime)}</span>
+            <span>
+              {formatTime(session.startTime)} - {formatTime(session.endTime)}
+            </span>
           </div>
 
           {/* AI Summary */}
           {session.aiSummary && (
             <div className="mb-3 p-3 bg-blue-50 rounded-lg">
-              <h4 className="text-sm font-medium text-blue-900 mb-1">AI Session Summary</h4>
+              <h4 className="text-sm font-medium text-blue-900 mb-1">
+                AI Session Summary
+              </h4>
               <p className="text-sm text-blue-800">{session.aiSummary}</p>
             </div>
           )}
@@ -236,22 +257,26 @@ const SessionCard: React.FC<SessionCardProps> = ({
           {session.feedback && (
             <div className="mb-3 p-3 bg-yellow-50 rounded-lg">
               <div className="flex items-center mb-1">
-                <span className="text-sm font-medium text-yellow-900 mr-2">Your Rating:</span>
+                <span className="text-sm font-medium text-yellow-900 mr-2">
+                  Your Rating:
+                </span>
                 <div className="flex items-center">
                   {[...Array(5)].map((_, i) => (
                     <Star
                       key={i}
                       className={`h-4 w-4 ${
                         i < session.feedback!.rating
-                          ? 'text-yellow-400 fill-current'
-                          : 'text-gray-300'
+                          ? "text-yellow-400 fill-current"
+                          : "text-gray-300"
                       }`}
                     />
                   ))}
                 </div>
               </div>
               {session.feedback.comment && (
-                <p className="text-sm text-yellow-800">"{session.feedback.comment}"</p>
+                <p className="text-sm text-yellow-800">
+                  "{session.feedback.comment}"
+                </p>
               )}
             </div>
           )}
@@ -268,16 +293,12 @@ const SessionCard: React.FC<SessionCardProps> = ({
               Leave Feedback
             </Button>
           )}
-          
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex items-center"
-          >
+
+          <Button variant="outline" size="sm" className="flex items-center">
             <MessageCircle className="h-4 w-4 mr-2" />
             Message Mentor
           </Button>
-          
+
           <Button
             variant="outline"
             size="sm"
