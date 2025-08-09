@@ -3,11 +3,11 @@ import { User, Bell, Shield, Globe, Palette, Save } from "lucide-react";
 import { Layout } from "../components/layout/Layout";
 import { Button, Input } from "../components/ui";
 import { useAuth } from "../contexts/AuthContext";
-import { useToast } from "../hooks/useToast";
+// import { useToast } from "../hooks/useToast";
 
 export const Settings: React.FC = () => {
   const { user } = useAuth();
-  const { showSuccess } = useToast();
+  // const { showSuccess } = useToast();
 
   const [profile, setProfile] = useState({
     name: user?.name || "",

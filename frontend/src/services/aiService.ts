@@ -91,11 +91,11 @@ class AIService {
       - title: step title
       - description: what they'll learn
       - estimatedTime: time needed
-      - resources: suggested resource types
+      - resources: suggested mentor session types (e.g., "1-on-1 coding session", "code review session", "project guidance", "Q&A session", "pair programming")
     - difficulty: beginner/intermediate/advanced
     - estimatedDuration: total time needed
-    
-    Focus on practical, actionable steps that build upon each other.
+
+    IMPORTANT: Focus on mentor-based learning. All resources should be types of mentoring sessions, not external websites or courses. Emphasize learning through direct mentorship, code reviews, and guided practice.
     `;
 
     const response = await this.generateContent(prompt);
@@ -374,13 +374,13 @@ class AIService {
   > {
     const prompt = `
     Generate 5 ${difficulty} level assessment questions for ${skill}:
-    
+
     Each question should have:
     - A clear, specific question
     - 4 multiple choice options
     - The correct answer index (0-3)
     - An explanation of why the answer is correct
-    
+
     Return as JSON array with objects containing: question, options, correctAnswer, explanation
     `;
 
@@ -394,6 +394,173 @@ class AIService {
         }
       } catch (error) {
         console.error("Failed to parse skill assessment JSON:", error);
+      }
+    }
+
+    return [];
+  }
+
+  // Summarize chat messages from video call
+  async summarizeChatMessages(
+    messages: Array<{
+      sender: string;
+      content: string;
+      timestamp: Date;
+    }>,
+    sessionTopic: string
+  ): Promise<{
+    summary: string;
+    keyPoints: string[];
+    actionItems: string[];
+    importantQuestions: string[];
+  } | null> {
+    const chatContent = messages
+      .map(
+        (msg) =>
+          `[${msg.timestamp.toLocaleTimeString()}] ${msg.sender}: ${
+            msg.content
+          }`
+      )
+      .join("\n");
+
+    const prompt = `
+    Analyze the following chat conversation from a mentoring session about "${sessionTopic}":
+
+    ${chatContent}
+
+    Provide a comprehensive summary in JSON format with:
+    - summary: A concise overview of the conversation
+    - keyPoints: Array of main topics discussed
+    - actionItems: Array of tasks or next steps mentioned
+    - importantQuestions: Array of significant questions asked by the learner
+
+    Focus on educational content and learning outcomes.
+    `;
+
+    const response = await this.generateContent(prompt);
+
+    if (response.success && response.data) {
+      try {
+        const jsonMatch = response.data.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          return JSON.parse(jsonMatch[0]);
+        }
+      } catch (error) {
+        console.error("Failed to parse chat summary JSON:", error);
+      }
+    }
+
+    return null;
+  }
+
+  // Generate session notes and summary
+  async generateSessionNotes(sessionData: {
+    topic: string;
+    duration: number;
+    participants: Array<{ name: string; role: string }>;
+    chatMessages: Array<{ sender: string; content: string; timestamp: Date }>;
+    keyDiscussions: string[];
+    learnerQuestions: string[];
+  }): Promise<{
+    sessionSummary: string;
+    learningObjectives: string[];
+    keyTakeaways: string[];
+    nextSteps: string[];
+    mentorInsights: string[];
+    recommendedFollowUp: string[];
+  } | null> {
+    const chatSummary = sessionData.chatMessages
+      .map((msg) => `${msg.sender}: ${msg.content}`)
+      .join("\n");
+
+    const prompt = `
+    Generate comprehensive session notes for a mentoring session:
+
+    Session Details:
+    - Topic: ${sessionData.topic}
+    - Duration: ${sessionData.duration} minutes
+    - Participants: ${sessionData.participants
+      .map((p) => `${p.name} (${p.role})`)
+      .join(", ")}
+
+    Key Discussions: ${sessionData.keyDiscussions.join(", ")}
+    Learner Questions: ${sessionData.learnerQuestions.join(", ")}
+
+    Chat Summary:
+    ${chatSummary}
+
+    Provide detailed session notes in JSON format with:
+    - sessionSummary: Comprehensive overview of the session
+    - learningObjectives: What the learner aimed to achieve
+    - keyTakeaways: Main insights and knowledge gained
+    - nextSteps: Specific actions for the learner to take
+    - mentorInsights: Valuable advice and guidance provided
+    - recommendedFollowUp: Suggested future session topics or areas to explore
+
+    Make it professional and educational, suitable for learning portfolio.
+    `;
+
+    const response = await this.generateContent(prompt);
+
+    if (response.success && response.data) {
+      try {
+        const jsonMatch = response.data.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          return JSON.parse(jsonMatch[0]);
+        }
+      } catch (error) {
+        console.error("Failed to parse session notes JSON:", error);
+      }
+    }
+
+    return null;
+  }
+
+  // Auto-save important chat messages
+  async identifyImportantMessages(
+    messages: Array<{
+      sender: string;
+      content: string;
+      timestamp: Date;
+    }>
+  ): Promise<
+    Array<{
+      message: string;
+      sender: string;
+      importance: "high" | "medium" | "low";
+      reason: string;
+      category: "question" | "answer" | "insight" | "resource" | "action";
+    }>
+  > {
+    const chatContent = messages
+      .map((msg) => `${msg.sender}: ${msg.content}`)
+      .join("\n");
+
+    const prompt = `
+    Analyze the following chat messages and identify the most important ones for learning:
+
+    ${chatContent}
+
+    Return a JSON array of important messages with:
+    - message: The actual message content
+    - sender: Who sent the message
+    - importance: high/medium/low
+    - reason: Why this message is important
+    - category: question/answer/insight/resource/action
+
+    Focus on educational value, key insights, important questions, and actionable advice.
+    `;
+
+    const response = await this.generateContent(prompt);
+
+    if (response.success && response.data) {
+      try {
+        const jsonMatch = response.data.match(/\[[\s\S]*\]/);
+        if (jsonMatch) {
+          return JSON.parse(jsonMatch[0]);
+        }
+      } catch (error) {
+        console.error("Failed to parse important messages JSON:", error);
       }
     }
 

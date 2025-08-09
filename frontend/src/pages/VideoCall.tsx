@@ -16,11 +16,12 @@ import {
   Volume2,
   VolumeX,
   Bot,
+  FileText,
 } from "lucide-react";
 import { Button } from "../components/ui";
 import { useAuth } from "../contexts/AuthContext";
-import { useToast } from "../hooks/useToast";
 import { AIAssistant } from "../components/ai/AIAssistant";
+import { SessionNotesManager } from "../components/ai/SessionNotesManager";
 
 interface CallState {
   isVideoEnabled: boolean;
@@ -65,6 +66,7 @@ export const VideoCall: React.FC = () => {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
+  const [showSessionNotes, setShowSessionNotes] = useState(false);
   const [participants] = useState([
     { id: "1", name: "John Doe", role: "mentor", isConnected: true },
     { id: "2", name: user?.name || "You", role: "learner", isConnected: true },
@@ -325,6 +327,27 @@ export const VideoCall: React.FC = () => {
             </div>
           </div>
         )}
+
+        {/* Session Notes Panel */}
+        {showSessionNotes && (
+          <div className="w-96 bg-gray-50 border-l border-gray-200 overflow-y-auto">
+            <SessionNotesManager
+              sessionData={{
+                topic: "React Development Session",
+                duration: Math.floor(callState.callDuration / 60),
+                participants: participants.map((p) => ({
+                  name: p.name,
+                  role: p.role,
+                })),
+              }}
+              chatMessages={chatMessages}
+              onSaveNotes={(notes) => {
+                console.log("Session notes saved:", notes);
+                // Here you would typically save to your backend
+              }}
+            />
+          </div>
+        )}
       </div>
 
       {/* Controls */}
@@ -381,6 +404,15 @@ export const VideoCall: React.FC = () => {
             className="w-12 h-12 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white border-0"
           >
             <Bot className="h-5 w-5" />
+          </Button>
+
+          <Button
+            variant={showSessionNotes ? "primary" : "outline"}
+            size="sm"
+            onClick={() => setShowSessionNotes(!showSessionNotes)}
+            className="w-12 h-12 rounded-full"
+          >
+            <FileText className="h-5 w-5" />
           </Button>
 
           <Button
