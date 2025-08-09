@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Calendar,
@@ -7,14 +7,21 @@ import {
   TrendingUp,
   Clock,
   Star,
+  Video,
+  Brain,
+  Sparkles,
 } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { Layout } from "../../components/layout";
 import { Button } from "../../components/ui";
+import { LearningPathGenerator } from "../../components/ai/LearningPathGenerator";
+import { SmartMentorRecommendations } from "../../components/ai/SmartMentorRecommendations";
 import { generateMockSessions, formatDate, formatTime } from "../../utils";
 
 export const LearnerDashboard: React.FC = () => {
   const { user } = useAuth();
+  const [isLearningPathOpen, setIsLearningPathOpen] = useState(false);
+  const [showAIRecommendations, setShowAIRecommendations] = useState(false);
 
   // Mock data for MVP
   const upcomingSessions = generateMockSessions().filter(
@@ -157,6 +164,31 @@ export const LearnerDashboard: React.FC = () => {
                     Session History
                   </Button>
                 </Link>
+                {/* Debug Video Call Button */}
+                <Link to="/video-call/demo-session-123">
+                  <Button className="w-full justify-start bg-orange-600 hover:bg-orange-700 text-white">
+                    <Video className="h-4 w-4 mr-2" />
+                    🧪 Test Video Call
+                  </Button>
+                </Link>
+                {/* AI Learning Path Generator */}
+                <Button
+                  onClick={() => setIsLearningPathOpen(true)}
+                  className="w-full justify-start bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white"
+                >
+                  <Brain className="h-4 w-4 mr-2" />
+                  🤖 AI Learning Path
+                </Button>
+                {/* AI Mentor Recommendations */}
+                <Button
+                  onClick={() =>
+                    setShowAIRecommendations(!showAIRecommendations)
+                  }
+                  variant={showAIRecommendations ? "primary" : "outline"}
+                  className="w-full justify-start"
+                >
+                  <Sparkles className="h-4 w-4 mr-2" />✨ Smart Mentor Match
+                </Button>
               </div>
             </div>
 
@@ -298,7 +330,90 @@ export const LearnerDashboard: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* AI Mentor Recommendations Section */}
+        {showAIRecommendations && (
+          <div className="mt-8">
+            <SmartMentorRecommendations
+              userProfile={{
+                skills: ["JavaScript", "React", "HTML", "CSS"],
+                goals: [
+                  "Learn React Hooks",
+                  "Build Full-Stack Apps",
+                  "Master State Management",
+                ],
+                experience: "intermediate",
+                preferences: [
+                  "Hands-on learning",
+                  "Project-based",
+                  "Interactive sessions",
+                ],
+              }}
+              availableMentors={[
+                {
+                  id: "1",
+                  name: "Sarah Johnson",
+                  skills: ["React", "JavaScript", "Node.js", "TypeScript"],
+                  experience: "Senior Developer with 8+ years",
+                  specialties: [
+                    "Frontend Architecture",
+                    "React Ecosystem",
+                    "Performance Optimization",
+                  ],
+                  rating: 4.9,
+                  totalSessions: 150,
+                  hourlyRate: 75,
+                  bio: "Passionate about teaching modern web development with React and JavaScript.",
+                },
+                {
+                  id: "2",
+                  name: "Mike Chen",
+                  skills: ["Full-Stack", "React", "Node.js", "MongoDB"],
+                  experience: "Lead Developer with 10+ years",
+                  specialties: [
+                    "System Design",
+                    "Database Architecture",
+                    "API Development",
+                  ],
+                  rating: 4.8,
+                  totalSessions: 200,
+                  hourlyRate: 85,
+                  bio: "Expert in building scalable web applications from frontend to backend.",
+                },
+                {
+                  id: "3",
+                  name: "Emily Rodriguez",
+                  skills: ["React", "JavaScript", "UI/UX", "CSS"],
+                  experience: "Senior Frontend Developer with 6+ years",
+                  specialties: [
+                    "Component Design",
+                    "State Management",
+                    "User Experience",
+                  ],
+                  rating: 4.9,
+                  totalSessions: 120,
+                  hourlyRate: 70,
+                  bio: "Focused on creating beautiful, functional user interfaces with React.",
+                },
+              ]}
+              onMentorSelect={(mentorId) => {
+                console.log("Selected mentor:", mentorId);
+                // Navigate to mentor profile or booking
+              }}
+            />
+          </div>
+        )}
       </div>
+
+      {/* AI Learning Path Generator Modal */}
+      <LearningPathGenerator
+        isOpen={isLearningPathOpen}
+        onClose={() => setIsLearningPathOpen(false)}
+        onPathGenerated={(path) => {
+          console.log("Generated learning path:", path);
+          // Handle the generated learning path
+        }}
+      />
     </Layout>
   );
 };

@@ -1,37 +1,50 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
-import { Calendar, Users, Clock, Star, TrendingUp, DollarSign, Bell } from 'lucide-react';
-import { useAuth } from '../../contexts/AuthContext';
-import { Layout } from '../../components/layout';
-import { Button } from '../../components/ui';
-import { generateMockSessions, formatDate, formatTime } from '../../utils';
+import React from "react";
+import { Link } from "react-router-dom";
+import {
+  Calendar,
+  Users,
+  Clock,
+  Star,
+  TrendingUp,
+  DollarSign,
+  Bell,
+  Video,
+} from "lucide-react";
+import { useAuth } from "../../contexts/AuthContext";
+import { Layout } from "../../components/layout";
+import { Button } from "../../components/ui";
+import { generateMockSessions, formatDate, formatTime } from "../../utils";
 
 export const MentorDashboard: React.FC = () => {
   const { user } = useAuth();
-  
+
   // Mock data for MVP
-  const upcomingSessions = generateMockSessions().filter(session => 
-    session.status === 'confirmed' && new Date(session.date) >= new Date()
-  ).slice(0, 3);
-  
+  const upcomingSessions = generateMockSessions()
+    .filter(
+      (session) =>
+        session.status === "confirmed" && new Date(session.date) >= new Date()
+    )
+    .slice(0, 3);
+
   const pendingRequests = [
     {
-      id: '1',
-      learnerName: 'Alice Johnson',
-      date: '2024-08-16',
-      startTime: '14:00',
-      endTime: '15:00',
-      message: 'Hi! I would love to learn about React hooks and state management.',
-      createdAt: '2024-08-14T10:00:00Z',
+      id: "1",
+      learnerName: "Alice Johnson",
+      date: "2024-08-16",
+      startTime: "14:00",
+      endTime: "15:00",
+      message:
+        "Hi! I would love to learn about React hooks and state management.",
+      createdAt: "2024-08-14T10:00:00Z",
     },
     {
-      id: '2',
-      learnerName: 'Bob Smith',
-      date: '2024-08-17',
-      startTime: '10:00',
-      endTime: '11:00',
-      message: 'Looking for help with TypeScript and advanced patterns.',
-      createdAt: '2024-08-14T12:00:00Z',
+      id: "2",
+      learnerName: "Bob Smith",
+      date: "2024-08-17",
+      startTime: "10:00",
+      endTime: "11:00",
+      message: "Looking for help with TypeScript and advanced patterns.",
+      createdAt: "2024-08-14T12:00:00Z",
     },
   ];
 
@@ -46,18 +59,19 @@ export const MentorDashboard: React.FC = () => {
 
   const recentFeedback = [
     {
-      id: '1',
-      learnerName: 'Sarah K.',
+      id: "1",
+      learnerName: "Sarah K.",
       rating: 5,
-      comment: 'Excellent session! Very clear explanations and practical examples.',
-      date: '2024-08-12',
+      comment:
+        "Excellent session! Very clear explanations and practical examples.",
+      date: "2024-08-12",
     },
     {
-      id: '2',
-      learnerName: 'Mike R.',
+      id: "2",
+      learnerName: "Mike R.",
       rating: 5,
-      comment: 'Great mentor with deep knowledge. Very patient and helpful.',
-      date: '2024-08-10',
+      comment: "Great mentor with deep knowledge. Very patient and helpful.",
+      date: "2024-08-10",
     },
   ];
 
@@ -82,8 +96,12 @@ export const MentorDashboard: React.FC = () => {
                 <Users className="h-6 w-6 text-blue-600" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Sessions</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.totalSessions}</p>
+                <p className="text-sm font-medium text-gray-600">
+                  Total Sessions
+                </p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {stats.totalSessions}
+                </p>
               </div>
             </div>
           </div>
@@ -94,8 +112,12 @@ export const MentorDashboard: React.FC = () => {
                 <DollarSign className="h-6 w-6 text-green-600" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Earnings</p>
-                <p className="text-2xl font-bold text-gray-900">${stats.totalEarnings.toLocaleString()}</p>
+                <p className="text-sm font-medium text-gray-600">
+                  Total Earnings
+                </p>
+                <p className="text-2xl font-bold text-gray-900">
+                  ${stats.totalEarnings.toLocaleString()}
+                </p>
               </div>
             </div>
           </div>
@@ -107,7 +129,9 @@ export const MentorDashboard: React.FC = () => {
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Avg Rating</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.averageRating}</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {stats.averageRating}
+                </p>
               </div>
             </div>
           </div>
@@ -118,8 +142,12 @@ export const MentorDashboard: React.FC = () => {
                 <TrendingUp className="h-6 w-6 text-purple-600" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Response Rate</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.responseRate}%</p>
+                <p className="text-sm font-medium text-gray-600">
+                  Response Rate
+                </p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {stats.responseRate}%
+                </p>
               </div>
             </div>
           </div>
@@ -129,7 +157,9 @@ export const MentorDashboard: React.FC = () => {
           {/* Quick Actions */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                Quick Actions
+              </h2>
               <div className="space-y-3">
                 <Link to="/mentor/availability">
                   <Button variant="outline" className="w-full justify-start">
@@ -154,18 +184,32 @@ export const MentorDashboard: React.FC = () => {
                     My Sessions
                   </Button>
                 </Link>
+                {/* Debug Video Call Button */}
+                <Link to="/video-call/demo-session-456">
+                  <Button className="w-full justify-start bg-orange-600 hover:bg-orange-700 text-white">
+                    <Video className="h-4 w-4 mr-2" />
+                    🧪 Test Video Call
+                  </Button>
+                </Link>
               </div>
             </div>
 
             {/* Next Session */}
             {stats.nextSession && (
               <div className="bg-white rounded-lg shadow p-6 mt-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">Next Session</h2>
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                  Next Session
+                </h2>
                 <div className="border border-blue-200 rounded-lg p-4 bg-blue-50">
-                  <h3 className="font-medium text-blue-900">{stats.nextSession.topic}</h3>
-                  <p className="text-sm text-blue-700">with {stats.nextSession.learnerName}</p>
+                  <h3 className="font-medium text-blue-900">
+                    {stats.nextSession.topic}
+                  </h3>
                   <p className="text-sm text-blue-700">
-                    {formatDate(stats.nextSession.date)} at {formatTime(stats.nextSession.startTime)}
+                    with {stats.nextSession.learnerName}
+                  </p>
+                  <p className="text-sm text-blue-700">
+                    {formatDate(stats.nextSession.date)} at{" "}
+                    {formatTime(stats.nextSession.startTime)}
                   </p>
                   <Button size="sm" className="mt-3 w-full">
                     Join Session
@@ -189,24 +233,38 @@ export const MentorDashboard: React.FC = () => {
                   )}
                 </h2>
                 <Link to="/mentor/requests">
-                  <Button variant="ghost" size="sm">View All</Button>
+                  <Button variant="ghost" size="sm">
+                    View All
+                  </Button>
                 </Link>
               </div>
-              
+
               {pendingRequests.length > 0 ? (
                 <div className="space-y-4">
                   {pendingRequests.slice(0, 2).map((request) => (
-                    <div key={request.id} className="border border-gray-200 rounded-lg p-4">
+                    <div
+                      key={request.id}
+                      className="border border-gray-200 rounded-lg p-4"
+                    >
                       <div className="flex items-center justify-between mb-2">
-                        <h3 className="font-medium text-gray-900">{request.learnerName}</h3>
+                        <h3 className="font-medium text-gray-900">
+                          {request.learnerName}
+                        </h3>
                         <span className="text-sm text-gray-500">
-                          {formatDate(request.date)} at {formatTime(request.startTime)}
+                          {formatDate(request.date)} at{" "}
+                          {formatTime(request.startTime)}
                         </span>
                       </div>
-                      <p className="text-sm text-gray-600 mb-3">"{request.message}"</p>
+                      <p className="text-sm text-gray-600 mb-3">
+                        "{request.message}"
+                      </p>
                       <div className="flex space-x-2">
-                        <Button size="sm" className="flex-1">Accept</Button>
-                        <Button size="sm" variant="outline" className="flex-1">Decline</Button>
+                        <Button size="sm" className="flex-1">
+                          Accept
+                        </Button>
+                        <Button size="sm" variant="outline" className="flex-1">
+                          Decline
+                        </Button>
                       </div>
                     </div>
                   ))}
@@ -222,35 +280,48 @@ export const MentorDashboard: React.FC = () => {
             {/* Recent Feedback */}
             <div className="bg-white rounded-lg shadow p-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-gray-900">Recent Feedback</h2>
+                <h2 className="text-lg font-semibold text-gray-900">
+                  Recent Feedback
+                </h2>
                 <Link to="/mentor/feedback">
-                  <Button variant="ghost" size="sm">View All</Button>
+                  <Button variant="ghost" size="sm">
+                    View All
+                  </Button>
                 </Link>
               </div>
-              
+
               {recentFeedback.length > 0 ? (
                 <div className="space-y-4">
                   {recentFeedback.map((feedback) => (
-                    <div key={feedback.id} className="border border-gray-200 rounded-lg p-4">
+                    <div
+                      key={feedback.id}
+                      className="border border-gray-200 rounded-lg p-4"
+                    >
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center">
-                          <span className="font-medium text-gray-900">{feedback.learnerName}</span>
+                          <span className="font-medium text-gray-900">
+                            {feedback.learnerName}
+                          </span>
                           <div className="flex items-center ml-2">
                             {[...Array(5)].map((_, i) => (
                               <Star
                                 key={i}
                                 className={`h-4 w-4 ${
                                   i < feedback.rating
-                                    ? 'text-yellow-400 fill-current'
-                                    : 'text-gray-300'
+                                    ? "text-yellow-400 fill-current"
+                                    : "text-gray-300"
                                 }`}
                               />
                             ))}
                           </div>
                         </div>
-                        <span className="text-sm text-gray-500">{formatDate(feedback.date)}</span>
+                        <span className="text-sm text-gray-500">
+                          {formatDate(feedback.date)}
+                        </span>
                       </div>
-                      <p className="text-sm text-gray-700">"{feedback.comment}"</p>
+                      <p className="text-sm text-gray-700">
+                        "{feedback.comment}"
+                      </p>
                     </div>
                   ))}
                 </div>

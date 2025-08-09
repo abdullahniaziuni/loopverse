@@ -22,8 +22,12 @@ import { SessionHistory } from "./pages/learner/SessionHistory";
 import { MentorDashboard } from "./pages/mentor/Dashboard";
 import { Availability } from "./pages/mentor/Availability";
 import { BookingRequests } from "./pages/mentor/BookingRequests";
+import { MentorSessions } from "./pages/mentor/MentorSessions";
 import { AdminDashboard } from "./pages/admin/Dashboard";
 import { MentorApprovals } from "./pages/admin/MentorApprovals";
+import { FeedbackManagement } from "./pages/admin/FeedbackManagement";
+import { VideoCall } from "./pages/VideoCall";
+import { Settings } from "./pages/Settings";
 import { NotFound } from "./pages/NotFound";
 
 function App() {
@@ -123,6 +127,14 @@ function App() {
             }
           />
           <Route
+            path="/mentor/sessions"
+            element={
+              <ProtectedRoute allowedRoles={["mentor"]}>
+                <MentorSessions />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/admin/dashboard"
             element={
               <ProtectedRoute allowedRoles={["admin"]}>
@@ -135,6 +147,30 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={["admin"]}>
                 <MentorApprovals />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/feedback"
+            element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <FeedbackManagement />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/video-call/:sessionId"
+            element={
+              <ProtectedRoute allowedRoles={["learner", "mentor"]}>
+                <VideoCall />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute allowedRoles={["learner", "mentor", "admin"]}>
+                <Settings />
               </ProtectedRoute>
             }
           />
