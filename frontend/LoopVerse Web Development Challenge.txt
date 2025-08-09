@@ -1,0 +1,241 @@
+﻿LoopVerse Web Development Challenge
+Project Title: SkillSphere - A Real-Time Microlearning & Mentorship Platform
+Project Description
+Your team is tasked with building SkillSphere, a web-based microlearning platform that connects learners with mentors for short, focused 1-on-1 or joint learning sessions in real-time.
+This platform should simulate an actual EdTech SaaS product, including secure authentication, role-based user handling, live session booking, feedback, and AI-powered course recommendations.
+This project is meant to showcase your full-stack development, UX skills, real-time communication, and use of AI technologies - all while maintaining scalable architecture, efficient data handling, and great UI/UX.
+
+Objectives
+· Develop a full-fledged, real-time mentorship platform where:
+· Learners can explore mentors and schedule sessions
+· Mentors can manage their availability and conduct sessions
+· Admins can monitor, approve, and report on platform usage
+· AI assists with course/topic suggestions and session summarization
+
+User Roles and Their Responsibilities
+1. Learner
+· Register/login and complete a profile (interests, goals)
+· Browse/search mentors by skill, rating, tags
+· Book available slots from mentor calendars
+· Join sessions (video, audio, or chat link)
+· Rate mentors and leave session feedback
+· View learning history and progress stats
+· Receive AI-suggested sessions or mentors
+
+2. Mentor
+· Register/login and apply to become a mentor (approval required)
+· Define teaching subjects, upload portfolio
+· Set available time slots
+· Accept or decline session requests
+· Upload post-session resources (links, docs)
+· View ratings and feedback from learners
+
+3. Admin
+· Login to admin dashboard
+· Approve/reject mentor applications
+· View platform analytics: active users, session count, satisfaction scores
+· Moderate content (reviews, reports)
+· Export session data for records
+
+Functional Requirements
+Authentication System
+· Login/Signup via email/password or social login
+· Role-based access control (Learner, Mentor, Admin)
+
+Profile Management
+· Profile creation for all users
+· Editable learner/mentor bio, subjects, skills, interests
+
+Mentor Directory & Search
+· Browse mentors
+· Filters: skill, rating, availability, tags
+
+Session Booking System
+· Booking calendar UI
+· Timezone-aware scheduling
+· Session request and confirmation workflow
+· Session start timer/clock
+· Post-session Feedback
+· 5-star rating system with optional comments
+· Feedback visible to mentors (anonymized)
+
+Messaging System
+· Real-time messaging between learner and mentor (optional)
+· Message history per session
+
+Session Summary & Recommendations (AI)
+· Generate session summary using AI (based on keywords, chat log)
+· Suggest future topics for learners
+· Mentor-side AI: Suggest content based on learner profile
+
+Admin Dashboard
+· View total users, sessions, approval queue
+· Approve or reject mentor requests
+· View user feedback analytics
+
+
+Non-Functional Requirements
+· Responsive UI for desktop and mobile
+· Fast load times and minimal latency
+· Secure all user data (auth, personal info, feedback)
+· Proper error handling and form validation
+· Real-time indicators (mentor availability, session countdown)
+· Accessibility (contrast, screen-reader, keyboard support)
+Stakeholder’s journey
+1. Learner Journey
+1. Landing & Registration
+· User lands on homepage or Login/Signup page.
+· Registers via email/password or social login.
+· Selects role as Learner.
+· Completes profile setup: Name, bio, learning interests, goals, timezone.
+2. Learner Dashboard
+· AI-powered “Recommended Mentors” & “Suggested Topics” displayed.
+· Quick actions: Book Session, Browse Mentors, View History.
+· Real-time indicators: Mentor online/offline status.
+3. Browsing Mentors
+· Navigates to Mentor Listing Page.
+· Uses search & filters (skills, rating, availability, tags).
+· Clicks mentor profile to view details.
+4. Mentor Profile Page
+· Reads mentor bio, skills, ratings, and portfolio.
+· Views mentor’s available time slots (converted to learner’s timezone).
+· Initiates booking by selecting a slot → opens Booking Confirmation Dialog.
+5. Session Booking
+· Confirms date/time → Session request sent to mentor.
+· Receives booking status (confirmed/declined).
+· Calendar integration & session countdown visible on dashboard.
+6. Pre-Session
+· 5–10 minutes before session: Join Session button appears.
+· Learner joins via in-app video/audio/chat or external meeting link.
+7. During Session
+· Option to send files/links in real-time chat.
+· AI session keyword tracker (optional, for summary generation).
+8. Post-Session
+· Prompted to leave feedback & rating (via Feedback Modal).
+· Can view AI-generated session summary and suggested next steps.
+9. Session History
+· Timeline view of past sessions, ratings, resources.
+· Progress stats (topics covered, skills improved).
+· Option to rebook same mentor or try new suggestions.
+
+2. Mentor Journey
+1. Registration
+· Signs up as Mentor or Learner upgrading to Mentor role.
+· Completes mentor application form: skills, teaching subjects, portfolio, availability.
+· Awaiting admin approval.
+2. Post-Approval
+· Gains access to Mentor Dashboard.
+· Sets weekly availability in Calendar UI.
+· Updates profile and tags for better search visibility.
+3. Receiving Booking Requests
+· Notifications for new requests.
+· Can accept/decline booking → learner notified in real time.
+· Accepted sessions appear in mentor’s calendar.
+4. Conducting Sessions
+· Starts session via Start Now button.
+· Uses in-app chat/video/audio for teaching.
+· Can share resources live.
+5. After Session
+· Uploads resources or session notes.
+· Views feedback from learners (anonymous ratings + comments).
+· An AI mentor assistant suggests personalized tips based on learner’s progress.
+6. Mentor Analytics
+· The dashboard shows upcoming sessions, ratings, repeat learners.
+· Filters for viewing past performances.
+
+3. Admin Journey
+1. Admin Login
+· Logs into Admin Dashboard with secure credentials.
+2. Mentor Approval Workflow
+· Reviews pending mentor applications.
+· Approves/rejects with optional comments.
+3. Platform Monitoring
+· Views total users, active mentors, ongoing sessions in real time.
+· Access to analytics: average ratings, most-booked mentors, trending topics.
+4. Content Moderation
+· Reviews reported feedback or chat logs.
+· Flags inappropriate content.
+· Can remove or edit reviews.
+5. Data Export & Reports
+· Generates session, feedback, or financial reports.
+· Downloads CSV/PDF summaries for record-keeping.
+
+Cross-User Interactions
+· Learner ↔ Mentor: Real-time chat/video, feedback exchange, resource sharing.
+· Mentor ↔ Admin: Mentor application approval, profile updates.
+· Learner ↔ Admin: Issue reporting, support tickets.
+
+UI/UX Goals
+· Clean and minimal interface for quick actions
+· Dashboard UI per role (Learner, Mentor, Admin)
+· Search + filter experience that’s intuitive
+· Interactive booking UI (calendar or time slot picker)
+· Modals for rating, confirmation, profile edits
+· Visual learning history for learners (timeline or progress chart)
+
+Data Handling & Database Design
+· User Accounts (Authentication & Authorization)
+· Store securely using encryption & hashed passwords
+· Assign clear roles (Learner, Mentor, Admin)
+· Store login history, timestamps
+
+Profile Data
+· Learner: interests, topics, progress
+· Mentor: skills, available times, bio, resources
+· Admin: read-only or moderation flags
+ 
+
+Session Management
+· Booked sessions: mentor id, learner id, timestamp, duration, status (upcoming, completed, cancelled)
+· Session logs for AI summary
+· Availability data normalized (mentor id, slots[ ], timezone)
+
+Feedback System
+· One-to-many relation: session_id → feedback[]
+· Store rating, comment, timestamp, optional flag
+
+AI Integration Data
+· Session text logs or notes as prompt
+· Return summary and suggested future topics
+· Store AI responses per session for audit
+
+Search Data
+· Mentor profiles indexed by name, tags, skills
+· Full-text search or tag-based filtering
+
+Scalability Goals
+· Optimize read-heavy operations: mentor discovery, session feeds
+· Use pagination or lazy loading for directories
+· Queue-based architecture for AI features and email notifications
+· Rate-limit search queries and AI calls
+· Optimize DB with indexes on mentors, sessions, and availability
+
+
+
+Required Pages & Their Functions
+
+PageDescriptionLogin / SignupSecure auth + role selectorLearner DashboardBook sessions, view learning history, AI suggestionsMentor DashboardManage availability, sessions, resources, view feedbackAdmin DashboardApprove mentors, view platform stats, moderate feedbackMentor Listing PageFilterable/searchable list of mentors with bio, rating, book buttonMentor Profile PagePublic page showing mentor details and available time slotsSession Booking PageTime slot selector, confirmation dialogSession History PageView past sessions, AI-generated notes, and progress chartsFeedback Modal / PageSubmit and view session ratingsMessaging / Session Chat PageReal-time messaging interface (optional)AI Suggestion PageDisplay suggested mentors or topics from AI based on learner’s historyError / 404 / MaintenanceHandle broken links or maintenance windows gracefully
+AI Integration 
+Participants must:
+Use any open-source or cloud AI (e.g., OpenAI, Gemini, etc.)
+Implement at least one AI feature from the following:
+· Summarize session discussions
+· Suggest personalized topics or courses
+· Analyze feedback to provide mentor tips
+
+Bonus (Optional features)
+· PDF/Email certificate of completed sessions
+· Notification system (email or in-app)
+· Dark mode toggle
+· Public mentor profile link sharing
+
+Evaluation Criteria
+AreaWeight (%)Evaluation FocusFunctionality30%Booking, session handling, search, feedback, AI integrationCode Quality20%Structure, readability, proper componentization, DRY principlesInnovation (AI Use)15%Value and implementation of AI-generated suggestionsScalability & DB10%How well the DB schema supports future scaling, normalization, performanceUI/UX Design25%Clarity, responsiveness, user journey, design consistency
+
+Submission Guidelines for Loopverse Competition
+Participants must upload the following items in a GitHub repository:
+1. PDF File – A short report explaining your solution, approach, and results.  
+2. Code – Complete and well-documented source code of your project.  
+3. Video – A short demo/explanation of your project (upload video on Drive/YouTube and share the link in the README).
+Note: All these components must be included in a single GitHub repository. Make sure the repository is public and the link is submitted before the deadline.
+
