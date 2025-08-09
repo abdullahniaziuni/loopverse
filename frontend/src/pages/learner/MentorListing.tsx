@@ -1,9 +1,19 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Search, Filter, Star, MapPin, Clock } from "lucide-react";
+import {
+  Search,
+  Filter,
+  Star,
+  MapPin,
+  Clock,
+  X,
+  ChevronDown,
+  Calendar,
+  DollarSign,
+} from "lucide-react";
 import { Layout } from "../../components/layout";
 import { Button, Input, Select } from "../../components/ui";
-import { renderStars } from "../../utils";
+import { renderStars, COMMON_TIMEZONES, getUserTimezone } from "../../utils";
 import { Mentor } from "../../types";
 import { apiService } from "../../services/api";
 
@@ -14,6 +24,18 @@ export const MentorListing: React.FC = () => {
   const [mentors, setMentors] = useState<Mentor[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Advanced filters
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState({
+    minRating: 0,
+    maxPrice: 1000,
+    timezone: "",
+    availability: "",
+    experience: "",
+    languages: [] as string[],
+  });
+  const [activeFilters, setActiveFilters] = useState<string[]>([]);
 
   // Fetch mentors from API
   useEffect(() => {
@@ -40,6 +62,60 @@ export const MentorListing: React.FC = () => {
 
     fetchMentors();
   }, []);
+
+  const languages = [
+    "English",
+    "Spanish",
+    "French",
+    "German",
+    "Chinese",
+    "Japanese",
+    "Hindi",
+  ];
+  const experienceLevels = [
+    "1-2 years",
+    "3-5 years",
+    "5-10 years",
+    "10+ years",
+  ];
+
+  // Filter management
+  const applyFilter = (key: string, value: any) => {
+    setFilters((prev) => ({ ...prev, [key]: value }));
+
+    if (value && !activeFilters.includes(key)) {
+      setActiveFilters((prev) => [...prev, key]);
+    } else if (!value && activeFilters.includes(key)) {
+      setActiveFilters((prev) => prev.filter((f) => f !== key));
+    }
+  };
+
+  const removeFilter = (key: string) => {
+    setFilters((prev) => ({
+      ...prev,
+      [key]:
+        key === "languages"
+          ? []
+          : key === "minRating"
+          ? 0
+          : key === "maxPrice"
+          ? 1000
+          : "",
+    }));
+    setActiveFilters((prev) => prev.filter((f) => f !== key));
+  };
+
+  const clearAllFilters = () => {
+    setFilters({
+      minRating: 0,
+      maxPrice: 1000,
+      timezone: "",
+      availability: "",
+      experience: "",
+      languages: [],
+    });
+    setActiveFilters([]);
+  };
 
   // Get unique skills for filter
   const allSkills = Array.from(
@@ -72,7 +148,27 @@ export const MentorListing: React.FC = () => {
 
       const matchesSkill = !selectedSkill || skillNames.includes(selectedSkill);
 
-      return matchesSearch && matchesSkill;
+      // Advanced filters
+      const matchesRating = mentor.rating >= filters.minRating;
+      const matchesPrice =
+        !mentor.hourlyRate || mentor.hourlyRate <= filters.maxPrice;
+      const matchesTimezone =
+        !filters.timezone || mentor.timezone === filters.timezone;
+      const matchesExperience =
+        !filters.experience || mentor.experience === filters.experience;
+      const matchesLanguages =
+        filters.languages.length === 0 ||
+        filters.languages.some((lang) => mentor.languages?.includes(lang));
+
+      return (
+        matchesSearch &&
+        matchesSkill &&
+        matchesRating &&
+        matchesPrice &&
+        matchesTimezone &&
+        matchesExperience &&
+        matchesLanguages
+      );
     })
     .sort((a, b) => {
       switch (sortBy) {
@@ -159,6 +255,179 @@ export const MentorListing: React.FC = () => {
               />
             </div>
           </div>
+
+          {/* Advanced Filters Toggle */}
+          <div className="mt-4 flex items-center justify-between">
+            <Button
+              variant="ghost"
+              onClick={() => setShowFilters(!showFilters)}
+              className="flex items-center"
+            >
+              <Filter className="h-4 w-4 mr-2" />
+              Advanced Filters
+              <ChevronDown
+                className={`h-4 w-4 ml-2 transition-transform ${
+                  showFilters ? "rotate-180" : ""
+                }`}
+              />
+            </Button>
+
+            {activeFilters.length > 0 && (
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-600">
+                  {activeFilters.length} filter(s) active
+                </span>
+                <Button variant="ghost" size="sm" onClick={clearAllFilters}>
+                  Clear All
+                </Button>
+              </div>
+            )}
+          </div>
+
+          {/* Advanced Filters Panel */}
+          {showFilters && (
+            <div className="mt-4 p-4 border border-gray-200 rounded-lg bg-gray-50">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {/* Rating Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Minimum Rating
+                  </label>
+                  <select
+                    value={filters.minRating}
+                    onChange={(e) =>
+                      applyFilter("minRating", Number(e.target.value))
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value={0}>Any Rating</option>
+                    <option value={3}>3+ Stars</option>
+                    <option value={4}>4+ Stars</option>
+                    <option value={4.5}>4.5+ Stars</option>
+                  </select>
+                </div>
+
+                {/* Price Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Max Price ($/hour)
+                  </label>
+                  <select
+                    value={filters.maxPrice}
+                    onChange={(e) =>
+                      applyFilter("maxPrice", Number(e.target.value))
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value={1000}>Any Price</option>
+                    <option value={25}>Under $25</option>
+                    <option value={50}>Under $50</option>
+                    <option value={100}>Under $100</option>
+                    <option value={200}>Under $200</option>
+                  </select>
+                </div>
+
+                {/* Timezone Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Timezone
+                  </label>
+                  <select
+                    value={filters.timezone}
+                    onChange={(e) => applyFilter("timezone", e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Any Timezone</option>
+                    {COMMON_TIMEZONES.map((tz) => (
+                      <option key={tz.value} value={tz.value}>
+                        {tz.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Experience Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Experience Level
+                  </label>
+                  <select
+                    value={filters.experience}
+                    onChange={(e) => applyFilter("experience", e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Any Experience</option>
+                    {experienceLevels.map((level) => (
+                      <option key={level} value={level}>
+                        {level}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Languages Filter */}
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Languages
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {languages.map((language) => (
+                      <button
+                        key={language}
+                        onClick={() => {
+                          const newLanguages = filters.languages.includes(
+                            language
+                          )
+                            ? filters.languages.filter((l) => l !== language)
+                            : [...filters.languages, language];
+                          applyFilter("languages", newLanguages);
+                        }}
+                        className={`px-3 py-1 rounded-full text-sm transition-colors ${
+                          filters.languages.includes(language)
+                            ? "bg-blue-500 text-white"
+                            : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                        }`}
+                      >
+                        {language}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Active Filters Display */}
+              {activeFilters.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <div className="flex flex-wrap gap-2">
+                    {activeFilters.map((filterKey) => (
+                      <span
+                        key={filterKey}
+                        className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800"
+                      >
+                        {filterKey === "minRating" &&
+                          `${filters.minRating}+ Stars`}
+                        {filterKey === "maxPrice" &&
+                          `Under $${filters.maxPrice}`}
+                        {filterKey === "timezone" &&
+                          COMMON_TIMEZONES.find(
+                            (tz) => tz.value === filters.timezone
+                          )?.abbreviation}
+                        {filterKey === "experience" && filters.experience}
+                        {filterKey === "languages" &&
+                          `${filters.languages.length} language(s)`}
+                        <button
+                          onClick={() => removeFilter(filterKey)}
+                          className="ml-2 text-blue-600 hover:text-blue-800"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Loading State */}

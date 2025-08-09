@@ -1,6 +1,7 @@
 import React from "react";
 import { Navigation } from "./Navigation";
 import { Footer } from "./Footer";
+import { ToastContainer as WSToastContainer } from "../notifications";
 import { ToastContainer } from "../ui/Toast";
 import { useToast } from "../../hooks/useToast";
 
@@ -24,6 +25,9 @@ export const Layout: React.FC<LayoutProps> = ({
       {showFooter && <Footer />}
 
       <ToastContainer toasts={toasts} onRemove={removeToast} />
+
+      {/* WebSocket Toast Notifications */}
+      <WSToastContainer />
     </div>
   );
 };

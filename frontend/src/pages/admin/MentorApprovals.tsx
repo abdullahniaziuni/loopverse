@@ -1,9 +1,18 @@
-import React, { useState } from 'react';
-import { UserCheck, User, Mail, Calendar, CheckCircle, XCircle, Eye } from 'lucide-react';
-import { Layout } from '../../components/layout';
-import { Button, Modal, Textarea } from '../../components/ui';
-import { useToast } from '../../hooks/useToast';
-import { formatDate } from '../../utils';
+import React, { useState, useEffect } from "react";
+import {
+  UserCheck,
+  User,
+  Mail,
+  Calendar,
+  CheckCircle,
+  XCircle,
+  Eye,
+} from "lucide-react";
+import { Layout } from "../../components/layout";
+import { Button, Modal, Textarea } from "../../components/ui";
+import { useToast } from "../../hooks/useToast";
+import { formatDate } from "../../utils";
+import { apiService } from "../../services/api";
 
 interface MentorApplication {
   id: string;
@@ -15,98 +24,152 @@ interface MentorApplication {
   portfolio?: string;
   linkedin?: string;
   appliedAt: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: "pending" | "approved" | "rejected";
 }
 
 export const MentorApprovals: React.FC = () => {
-  const [applications, setApplications] = useState<MentorApplication[]>([
-    {
-      id: '1',
-      name: 'David Wilson',
-      email: 'david@example.com',
-      skills: ['Python', 'Django', 'PostgreSQL', 'AWS'],
-      experience: '5 years',
-      bio: 'Full-stack developer with 5+ years of experience building scalable web applications. Passionate about mentoring and helping others grow in their careers.',
-      portfolio: 'https://davidwilson.dev',
-      linkedin: 'https://linkedin.com/in/davidwilson',
-      appliedAt: '2024-08-13T10:00:00Z',
-      status: 'pending',
-    },
-    {
-      id: '2',
-      name: 'Lisa Chen',
-      email: 'lisa@example.com',
-      skills: ['React Native', 'Mobile Development', 'iOS', 'Swift'],
-      experience: '4 years',
-      bio: 'Mobile app developer specializing in React Native and iOS development. Love sharing knowledge about mobile development best practices.',
-      portfolio: 'https://lisachen.dev',
-      appliedAt: '2024-08-12T15:00:00Z',
-      status: 'pending',
-    },
-    {
-      id: '3',
-      name: 'Alex Rodriguez',
-      email: 'alex@example.com',
-      skills: ['DevOps', 'Kubernetes', 'Docker', 'CI/CD'],
-      experience: '6 years',
-      bio: 'DevOps engineer with extensive experience in cloud infrastructure and automation. Enjoy helping teams improve their deployment processes.',
-      appliedAt: '2024-08-11T09:00:00Z',
-      status: 'approved',
-    },
-  ]);
+  const [applications, setApplications] = useState<MentorApplication[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const [selectedApplication, setSelectedApplication] = useState<MentorApplication | null>(null);
-  const [actionType, setActionType] = useState<'approve' | 'reject' | 'view' | null>(null);
-  const [responseMessage, setResponseMessage] = useState('');
+  const [selectedApplication, setSelectedApplication] =
+    useState<MentorApplication | null>(null);
+  const [actionType, setActionType] = useState<
+    "approve" | "reject" | "view" | null
+  >(null);
+  const [responseMessage, setResponseMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { success: showSuccess, error: showError } = useToast();
 
-  const pendingApplications = applications.filter(app => app.status === 'pending');
-  const processedApplications = applications.filter(app => app.status !== 'pending');
+  // Fetch pending mentor applications
+  useEffect(() => {
+    const fetchApplications = async () => {
+      try {
+        setIsLoading(true);
+        const response = await apiService.getPendingMentorApplications();
+        if (response.success && response.data) {
+          // Transform backend data to frontend format
+          const transformedApplications = response.data.map((mentor: any) => ({
+            id: mentor._id || mentor.id,
+            name: `${mentor.firstName} ${mentor.lastName}`,
+            email: mentor.email,
+            skills:
+              mentor.skills?.map((skill: any) =>
+                typeof skill === "string" ? skill : skill.name
+              ) || [],
+            experience: `${mentor.yearsOfExperience || 0} years`,
+            bio: mentor.biography || "No bio provided",
+            appliedAt: mentor.createdAt,
+            status: "pending" as const,
+          }));
+          setApplications(transformedApplications);
+        } else {
+          setError(response.error || "Failed to fetch applications");
+        }
+      } catch (err) {
+        setError("Failed to fetch mentor applications");
+        console.error("Error fetching applications:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  const handleAction = (application: MentorApplication, action: 'approve' | 'reject' | 'view') => {
+    fetchApplications();
+  }, []);
+
+  const pendingApplications = applications.filter(
+    (app) => app.status === "pending"
+  );
+  const processedApplications = applications.filter(
+    (app) => app.status !== "pending"
+  );
+
+  const handleAction = (
+    application: MentorApplication,
+    action: "approve" | "reject" | "view"
+  ) => {
     setSelectedApplication(application);
     setActionType(action);
-    setResponseMessage('');
+    setResponseMessage("");
   };
 
   const submitDecision = async () => {
-    if (!selectedApplication || !actionType || actionType === 'view') return;
+    if (!selectedApplication || !actionType || actionType === "view") return;
 
     setIsSubmitting(true);
     try {
-      // Mock API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      setApplications(prev => prev.map(app => 
-        app.id === selectedApplication.id 
-          ? { ...app, status: actionType === 'approve' ? 'approved' : 'rejected' }
-          : app
-      ));
-
-      showSuccess(
-        actionType === 'approve' 
-          ? 'Mentor application approved! The applicant will be notified.'
-          : 'Mentor application rejected. The applicant will be notified.'
+      // Call real API
+      const response = await apiService.approveMentorApplication(
+        selectedApplication.id,
+        actionType === "approve",
+        responseMessage
       );
-      
+
+      if (response.success) {
+        // Remove from pending applications list
+        setApplications((prev) =>
+          prev.filter((app) => app.id !== selectedApplication.id)
+        );
+
+        showSuccess(
+          actionType === "approve"
+            ? "Mentor application approved! The applicant will be notified."
+            : "Mentor application rejected. The applicant will be notified."
+        );
+      } else {
+        showError(response.error || "Failed to process application");
+      }
+
       setSelectedApplication(null);
       setActionType(null);
-      setResponseMessage('');
+      setResponseMessage("");
     } catch (error) {
-      showError('Failed to process application. Please try again.');
+      showError("Failed to process application. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="animate-pulse">
+            <div className="h-8 bg-gray-300 rounded mb-4"></div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="h-24 bg-gray-300 rounded"></div>
+              ))}
+            </div>
+            <div className="h-64 bg-gray-300 rounded"></div>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (error) {
+    return (
+      <Layout>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="text-center py-12">
+            <div className="text-red-600 mb-4">Error loading applications</div>
+            <p className="text-gray-600">{error}</p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
   return (
     <Layout>
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Mentor Applications</h1>
+          <h1 className="text-3xl font-bold text-gray-900">
+            Mentor Applications
+          </h1>
           <p className="text-gray-600 mt-2">
             Review and approve mentor applications to maintain platform quality.
           </p>
@@ -115,18 +178,20 @@ export const MentorApprovals: React.FC = () => {
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="bg-white rounded-lg shadow p-6">
-            <div className="text-2xl font-bold text-gray-900">{pendingApplications.length}</div>
+            <div className="text-2xl font-bold text-gray-900">
+              {pendingApplications.length}
+            </div>
             <div className="text-sm text-gray-600">Pending Review</div>
           </div>
           <div className="bg-white rounded-lg shadow p-6">
             <div className="text-2xl font-bold text-gray-900">
-              {applications.filter(app => app.status === 'approved').length}
+              {applications.filter((app) => app.status === "approved").length}
             </div>
             <div className="text-sm text-gray-600">Approved</div>
           </div>
           <div className="bg-white rounded-lg shadow p-6">
             <div className="text-2xl font-bold text-gray-900">
-              {applications.filter(app => app.status === 'rejected').length}
+              {applications.filter((app) => app.status === "rejected").length}
             </div>
             <div className="text-sm text-gray-600">Rejected</div>
           </div>
@@ -151,9 +216,9 @@ export const MentorApprovals: React.FC = () => {
                   <ApplicationCard
                     key={application.id}
                     application={application}
-                    onApprove={() => handleAction(application, 'approve')}
-                    onReject={() => handleAction(application, 'reject')}
-                    onView={() => handleAction(application, 'view')}
+                    onApprove={() => handleAction(application, "approve")}
+                    onReject={() => handleAction(application, "reject")}
+                    onView={() => handleAction(application, "view")}
                     isPending={true}
                   />
                 ))}
@@ -176,7 +241,9 @@ export const MentorApprovals: React.FC = () => {
         {processedApplications.length > 0 && (
           <div className="bg-white rounded-lg shadow">
             <div className="p-6 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">Recent Decisions</h2>
+              <h2 className="text-lg font-semibold text-gray-900">
+                Recent Decisions
+              </h2>
             </div>
             <div className="p-6">
               <div className="space-y-6">
@@ -184,7 +251,7 @@ export const MentorApprovals: React.FC = () => {
                   <ApplicationCard
                     key={application.id}
                     application={application}
-                    onView={() => handleAction(application, 'view')}
+                    onView={() => handleAction(application, "view")}
                     isPending={false}
                   />
                 ))}
@@ -200,12 +267,14 @@ export const MentorApprovals: React.FC = () => {
         onClose={() => {
           setSelectedApplication(null);
           setActionType(null);
-          setResponseMessage('');
+          setResponseMessage("");
         }}
         title={
-          actionType === 'approve' ? 'Approve Application' :
-          actionType === 'reject' ? 'Reject Application' :
-          'Application Details'
+          actionType === "approve"
+            ? "Approve Application"
+            : actionType === "reject"
+            ? "Reject Application"
+            : "Application Details"
         }
         size="lg"
       >
@@ -216,7 +285,9 @@ export const MentorApprovals: React.FC = () => {
               <div className="bg-gray-50 rounded-lg p-4 mb-4">
                 <div className="flex items-center mb-3">
                   <User className="h-5 w-5 text-gray-400 mr-2" />
-                  <h4 className="font-medium text-gray-900">{selectedApplication.name}</h4>
+                  <h4 className="font-medium text-gray-900">
+                    {selectedApplication.name}
+                  </h4>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                   <div className="flex items-center">
@@ -225,7 +296,9 @@ export const MentorApprovals: React.FC = () => {
                   </div>
                   <div className="flex items-center">
                     <Calendar className="h-4 w-4 text-gray-400 mr-2" />
-                    <span>Applied {formatDate(selectedApplication.appliedAt)}</span>
+                    <span>
+                      Applied {formatDate(selectedApplication.appliedAt)}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -233,7 +306,9 @@ export const MentorApprovals: React.FC = () => {
               <div className="space-y-4">
                 <div>
                   <h5 className="font-medium text-gray-900 mb-2">Experience</h5>
-                  <p className="text-sm text-gray-700">{selectedApplication.experience}</p>
+                  <p className="text-sm text-gray-700">
+                    {selectedApplication.experience}
+                  </p>
                 </div>
 
                 <div>
@@ -252,10 +327,13 @@ export const MentorApprovals: React.FC = () => {
 
                 <div>
                   <h5 className="font-medium text-gray-900 mb-2">Bio</h5>
-                  <p className="text-sm text-gray-700">{selectedApplication.bio}</p>
+                  <p className="text-sm text-gray-700">
+                    {selectedApplication.bio}
+                  </p>
                 </div>
 
-                {(selectedApplication.portfolio || selectedApplication.linkedin) && (
+                {(selectedApplication.portfolio ||
+                  selectedApplication.linkedin) && (
                   <div>
                     <h5 className="font-medium text-gray-900 mb-2">Links</h5>
                     <div className="space-y-1">
@@ -284,12 +362,12 @@ export const MentorApprovals: React.FC = () => {
                 )}
               </div>
 
-              {actionType !== 'view' && (
+              {actionType !== "view" && (
                 <div className="mt-4">
                   <Textarea
                     label={`Message to applicant (optional)`}
                     placeholder={
-                      actionType === 'approve' 
+                      actionType === "approve"
                         ? "Welcome to SkillSphere! We're excited to have you as a mentor."
                         : "Thank you for your interest. Unfortunately, we cannot approve your application at this time."
                     }
@@ -300,7 +378,7 @@ export const MentorApprovals: React.FC = () => {
                 </div>
               )}
             </div>
-            
+
             <div className="flex space-x-3">
               <Button
                 variant="outline"
@@ -308,19 +386,21 @@ export const MentorApprovals: React.FC = () => {
                 onClick={() => {
                   setSelectedApplication(null);
                   setActionType(null);
-                  setResponseMessage('');
+                  setResponseMessage("");
                 }}
               >
-                {actionType === 'view' ? 'Close' : 'Cancel'}
+                {actionType === "view" ? "Close" : "Cancel"}
               </Button>
-              {actionType !== 'view' && (
+              {actionType !== "view" && (
                 <Button
                   className="flex-1"
                   onClick={submitDecision}
                   isLoading={isSubmitting}
-                  variant={actionType === 'approve' ? 'primary' : 'danger'}
+                  variant={actionType === "approve" ? "primary" : "danger"}
                 >
-                  {actionType === 'approve' ? 'Approve Application' : 'Reject Application'}
+                  {actionType === "approve"
+                    ? "Approve Application"
+                    : "Reject Application"}
                 </Button>
               )}
             </div>
@@ -339,21 +419,21 @@ interface ApplicationCardProps {
   isPending: boolean;
 }
 
-const ApplicationCard: React.FC<ApplicationCardProps> = ({ 
-  application, 
-  onApprove, 
-  onReject, 
+const ApplicationCard: React.FC<ApplicationCardProps> = ({
+  application,
+  onApprove,
+  onReject,
   onView,
-  isPending 
+  isPending,
 }) => {
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'approved':
-        return 'bg-green-100 text-green-800';
-      case 'rejected':
-        return 'bg-red-100 text-red-800';
+      case "approved":
+        return "bg-green-100 text-green-800";
+      case "rejected":
+        return "bg-red-100 text-red-800";
       default:
-        return 'bg-yellow-100 text-yellow-800';
+        return "bg-yellow-100 text-yellow-800";
     }
   };
 
@@ -365,16 +445,20 @@ const ApplicationCard: React.FC<ApplicationCardProps> = ({
             <h3 className="text-lg font-semibold text-gray-900">
               {application.name}
             </h3>
-            <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(application.status)}`}>
+            <span
+              className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
+                application.status
+              )}`}
+            >
               {application.status}
             </span>
           </div>
-          
+
           <div className="flex items-center text-gray-600 mb-2">
             <Mail className="h-4 w-4 mr-2" />
             <span>{application.email}</span>
           </div>
-          
+
           <div className="flex items-center text-gray-600 mb-3">
             <Calendar className="h-4 w-4 mr-2" />
             <span>Applied {formatDate(application.appliedAt)}</span>
@@ -411,7 +495,7 @@ const ApplicationCard: React.FC<ApplicationCardProps> = ({
             <Eye className="h-4 w-4 mr-1" />
             View Details
           </Button>
-          
+
           {isPending && onApprove && onReject && (
             <>
               <Button

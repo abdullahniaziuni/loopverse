@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
-import { Calendar, Clock, Plus, Trash2, Edit } from 'lucide-react';
-import { Layout } from '../../components/layout';
-import { Button, Input, Modal } from '../../components/ui';
-import { useToast } from '../../hooks/useToast';
-import { formatDate, formatTime } from '../../utils';
+import React, { useState } from "react";
+import { Calendar, Clock, Plus, Trash2, Edit } from "lucide-react";
+import { Layout } from "../../components/layout";
+import { Button, Input, Modal } from "../../components/ui";
+import { useToast } from "../../hooks/useToast";
+import { formatDate, formatTime } from "../../utils";
 
-interface AvailabilitySlot {
+interface AvailabilitySlotLocal {
   id: string;
   date: string;
   startTime: string;
@@ -14,50 +14,23 @@ interface AvailabilitySlot {
 }
 
 export const Availability: React.FC = () => {
-  const [slots, setSlots] = useState<AvailabilitySlot[]>([
-    {
-      id: '1',
-      date: '2024-08-15',
-      startTime: '09:00',
-      endTime: '10:00',
-      isBooked: false,
-    },
-    {
-      id: '2',
-      date: '2024-08-15',
-      startTime: '14:00',
-      endTime: '15:00',
-      isBooked: true,
-    },
-    {
-      id: '3',
-      date: '2024-08-16',
-      startTime: '10:00',
-      endTime: '11:00',
-      isBooked: false,
-    },
-    {
-      id: '4',
-      date: '2024-08-17',
-      startTime: '16:00',
-      endTime: '17:00',
-      isBooked: false,
-    },
-  ]);
+  const [slots, setSlots] = useState<AvailabilitySlotLocal[]>([]);
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [editingSlot, setEditingSlot] = useState<AvailabilitySlot | null>(null);
+  const [editingSlot, setEditingSlot] = useState<AvailabilitySlotLocal | null>(
+    null
+  );
   const [formData, setFormData] = useState({
-    date: '',
-    startTime: '',
-    endTime: '',
+    date: "",
+    startTime: "",
+    endTime: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { success: showSuccess, error: showError } = useToast();
 
   const handleAddSlot = () => {
-    setFormData({ date: '', startTime: '', endTime: '' });
+    setFormData({ date: "", startTime: "", endTime: "" });
     setEditingSlot(null);
     setIsAddModalOpen(true);
   };
@@ -73,58 +46,72 @@ export const Availability: React.FC = () => {
   };
 
   const handleDeleteSlot = (slotId: string) => {
-    const slot = slots.find(s => s.id === slotId);
+    const slot = slots.find((s) => s.id === slotId);
     if (slot?.isBooked) {
-      showError('Cannot delete a booked slot. Please contact the learner to reschedule.');
+      showError(
+        "Cannot delete a booked slot. Please contact the learner to reschedule."
+      );
       return;
     }
-    
-    setSlots(prev => prev.filter(s => s.id !== slotId));
-    showSuccess('Availability slot deleted successfully.');
+
+    setSlots((prev) => prev.filter((s) => s.id !== slotId));
+    showSuccess("Availability slot deleted successfully.");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.date || !formData.startTime || !formData.endTime) {
-      showError('Please fill in all fields.');
+      showError("Please fill in all fields.");
       return;
     }
 
     if (formData.startTime >= formData.endTime) {
-      showError('End time must be after start time.');
+      showError("End time must be after start time.");
       return;
     }
 
     setIsSubmitting(true);
     try {
-      // Mock API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+      // Push availability to backend in mentor weekly format
+      const payload = slots
+        .filter((s) => !s.isBooked)
+        .map((s) => ({
+          dayOfWeek: new Date(s.date).getDay(),
+          startTime: s.startTime,
+          endTime: s.endTime,
+        }));
+
+      // Optimistically update local state
+      let newSlots = slots;
       if (editingSlot) {
-        // Update existing slot
-        setSlots(prev => prev.map(slot => 
-          slot.id === editingSlot.id 
-            ? { ...slot, ...formData }
-            : slot
-        ));
-        showSuccess('Availability slot updated successfully.');
+        newSlots = slots.map((slot) =>
+          slot.id === editingSlot.id ? { ...slot, ...formData } : slot
+        );
       } else {
-        // Add new slot
-        const newSlot: AvailabilitySlot = {
+        const newSlot: AvailabilitySlotLocal = {
           id: Date.now().toString(),
           ...formData,
           isBooked: false,
         };
-        setSlots(prev => [...prev, newSlot]);
-        showSuccess('Availability slot added successfully.');
+        newSlots = [...slots, newSlot];
       }
-      
+      setSlots(newSlots);
+
+      const res = await apiService.updateMentorAvailability(payload);
+      if (res.success) {
+        showSuccess("Availability saved successfully.");
+      } else {
+        showError(res.error || "Failed to save availability");
+        // Revert optimistic update
+        setSlots(slots);
+      }
+
       setIsAddModalOpen(false);
-      setFormData({ date: '', startTime: '', endTime: '' });
+      setFormData({ date: "", startTime: "", endTime: "" });
       setEditingSlot(null);
     } catch (error) {
-      showError('Failed to save availability slot. Please try again.');
+      showError("Failed to save availability slot. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -132,7 +119,7 @@ export const Availability: React.FC = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   // Group slots by date
@@ -154,7 +141,9 @@ export const Availability: React.FC = () => {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Manage Availability</h1>
+            <h1 className="text-3xl font-bold text-gray-900">
+              Manage Availability
+            </h1>
             <p className="text-gray-600 mt-2">
               Set your available time slots for mentoring sessions.
             </p>
@@ -168,18 +157,20 @@ export const Availability: React.FC = () => {
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="bg-white rounded-lg shadow p-6">
-            <div className="text-2xl font-bold text-gray-900">{slots.length}</div>
+            <div className="text-2xl font-bold text-gray-900">
+              {slots.length}
+            </div>
             <div className="text-sm text-gray-600">Total Slots</div>
           </div>
           <div className="bg-white rounded-lg shadow p-6">
             <div className="text-2xl font-bold text-gray-900">
-              {slots.filter(s => !s.isBooked).length}
+              {slots.filter((s) => !s.isBooked).length}
             </div>
             <div className="text-sm text-gray-600">Available</div>
           </div>
           <div className="bg-white rounded-lg shadow p-6">
             <div className="text-2xl font-bold text-gray-900">
-              {slots.filter(s => s.isBooked).length}
+              {slots.filter((s) => s.isBooked).length}
             </div>
             <div className="text-sm text-gray-600">Booked</div>
           </div>
@@ -218,7 +209,8 @@ export const Availability: React.FC = () => {
                   No availability slots set
                 </h3>
                 <p className="text-gray-600 mb-4">
-                  Add your first availability slot to start receiving booking requests.
+                  Add your first availability slot to start receiving booking
+                  requests.
                 </p>
                 <Button onClick={handleAddSlot}>
                   <Plus className="h-4 w-4 mr-2" />
@@ -234,7 +226,7 @@ export const Availability: React.FC = () => {
       <Modal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
-        title={editingSlot ? 'Edit Availability Slot' : 'Add Availability Slot'}
+        title={editingSlot ? "Edit Availability Slot" : "Add Availability Slot"}
       >
         <form onSubmit={handleSubmit}>
           <div className="space-y-4 mb-6">
@@ -245,9 +237,9 @@ export const Availability: React.FC = () => {
               value={formData.date}
               onChange={handleChange}
               required
-              min={new Date().toISOString().split('T')[0]}
+              min={new Date().toISOString().split("T")[0]}
             />
-            
+
             <Input
               label="Start Time"
               name="startTime"
@@ -256,7 +248,7 @@ export const Availability: React.FC = () => {
               onChange={handleChange}
               required
             />
-            
+
             <Input
               label="End Time"
               name="endTime"
@@ -266,7 +258,7 @@ export const Availability: React.FC = () => {
               required
             />
           </div>
-          
+
           <div className="flex space-x-3">
             <Button
               type="button"
@@ -276,12 +268,8 @@ export const Availability: React.FC = () => {
             >
               Cancel
             </Button>
-            <Button
-              type="submit"
-              className="flex-1"
-              isLoading={isSubmitting}
-            >
-              {editingSlot ? 'Update Slot' : 'Add Slot'}
+            <Button type="submit" className="flex-1" isLoading={isSubmitting}>
+              {editingSlot ? "Update Slot" : "Add Slot"}
             </Button>
           </div>
         </form>
@@ -298,11 +286,13 @@ interface SlotCardProps {
 
 const SlotCard: React.FC<SlotCardProps> = ({ slot, onEdit, onDelete }) => {
   return (
-    <div className={`border rounded-lg p-4 ${
-      slot.isBooked 
-        ? 'border-green-200 bg-green-50' 
-        : 'border-gray-200 bg-white hover:shadow-md transition-shadow'
-    }`}>
+    <div
+      className={`border rounded-lg p-4 ${
+        slot.isBooked
+          ? "border-green-200 bg-green-50"
+          : "border-gray-200 bg-white hover:shadow-md transition-shadow"
+      }`}
+    >
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center">
           <Clock className="h-4 w-4 text-gray-400 mr-2" />
@@ -310,15 +300,17 @@ const SlotCard: React.FC<SlotCardProps> = ({ slot, onEdit, onDelete }) => {
             {formatTime(slot.startTime)} - {formatTime(slot.endTime)}
           </span>
         </div>
-        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-          slot.isBooked
-            ? 'bg-green-100 text-green-800'
-            : 'bg-blue-100 text-blue-800'
-        }`}>
-          {slot.isBooked ? 'Booked' : 'Available'}
+        <span
+          className={`px-2 py-1 rounded-full text-xs font-medium ${
+            slot.isBooked
+              ? "bg-green-100 text-green-800"
+              : "bg-blue-100 text-blue-800"
+          }`}
+        >
+          {slot.isBooked ? "Booked" : "Available"}
         </span>
       </div>
-      
+
       {!slot.isBooked && (
         <div className="flex space-x-2">
           <Button

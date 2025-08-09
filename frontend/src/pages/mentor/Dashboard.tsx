@@ -93,23 +93,19 @@ export const MentorDashboard: React.FC = () => {
     );
   }
 
-  const recentFeedback = [
-    {
-      id: "1",
-      learnerName: "Sarah K.",
-      rating: 5,
-      comment:
-        "Excellent session! Very clear explanations and practical examples.",
-      date: "2024-08-12",
-    },
-    {
-      id: "2",
-      learnerName: "Mike R.",
-      rating: 5,
-      comment: "Great mentor with deep knowledge. Very patient and helpful.",
-      date: "2024-08-10",
-    },
-  ];
+  // Get recent feedback from completed sessions
+  const recentFeedback = sessions
+    .filter(
+      (session) => session.learnerFeedback && session.learnerFeedback.rating
+    )
+    .slice(0, 5)
+    .map((session) => ({
+      id: session.id,
+      learnerName: session.learnerName || "Anonymous",
+      rating: session.learnerFeedback?.rating || 0,
+      comment: session.learnerFeedback?.comment || "",
+      date: session.endTime || session.startTime,
+    }));
 
   return (
     <Layout>

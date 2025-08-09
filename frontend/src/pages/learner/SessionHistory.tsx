@@ -6,6 +6,7 @@ import {
   Star,
   MessageCircle,
   Download,
+  Award,
 } from "lucide-react";
 import { Layout } from "../../components/layout";
 import { Button, Modal, Textarea } from "../../components/ui";
@@ -13,18 +14,49 @@ import { formatDate, formatTime } from "../../utils";
 import { useToast } from "../../hooks/useToast";
 import { Session } from "../../types";
 import { apiService } from "../../services/api";
+import { CertificateGenerator } from "../../components/session";
 
 export const SessionHistory: React.FC = () => {
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [feedbackSession, setFeedbackSession] = useState<Session | null>(null);
+  const [certificateSession, setCertificateSession] = useState<Session | null>(
+    null
+  );
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
 
-  const { success: showSuccess } = useToast();
+  const { success: showSuccess, error: showError } = useToast();
 
-  const completedSessions = generateMockSessions().filter(
-    (session) => session.status === "completed"
-  );
+  // Fetch session history
+  useEffect(() => {
+    const fetchSessions = async () => {
+      try {
+        setIsLoading(true);
+        const response = await apiService.getSessions();
+        if (response.success && response.data) {
+          const sessionData = response.data.sessions || response.data;
+          // Filter for completed sessions only
+          const completedSessions = sessionData.filter(
+            (session: any) => session.status === "completed"
+          );
+          setSessions(completedSessions);
+        } else {
+          showError(response.error || "Failed to fetch session history");
+        }
+      } catch (error) {
+        console.error("Error fetching sessions:", error);
+        showError("Failed to fetch session history");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchSessions();
+  }, [showError]);
+
+  const completedSessions = sessions;
 
   const handleLeaveFeedback = (session: Session) => {
     setFeedbackSession(session);
@@ -33,21 +65,37 @@ export const SessionHistory: React.FC = () => {
   };
 
   const submitFeedback = async () => {
-    if (rating === 0) {
+    if (rating === 0 || !feedbackSession) {
       return;
     }
 
     setIsSubmittingFeedback(true);
     try {
-      // Mock API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const response = await apiService.submitFeedback(feedbackSession.id, {
+        rating,
+        comment,
+      });
 
-      showSuccess("Feedback submitted successfully!");
-      setFeedbackSession(null);
-      setRating(0);
-      setComment("");
+      if (response.success) {
+        showSuccess("Feedback submitted successfully!");
+        setFeedbackSession(null);
+        setRating(0);
+        setComment("");
+
+        // Update the session in the list
+        setSessions((prev) =>
+          prev.map((session) =>
+            session.id === feedbackSession.id
+              ? { ...session, feedback: { rating, comment } }
+              : session
+          )
+        );
+      } else {
+        showError(response.error || "Failed to submit feedback");
+      }
     } catch (error) {
-      // Error handling would go here
+      console.error("Error submitting feedback:", error);
+      showError("Failed to submit feedback");
     } finally {
       setIsSubmittingFeedback(false);
     }
@@ -56,6 +104,10 @@ export const SessionHistory: React.FC = () => {
   const downloadNotes = (session: Session) => {
     // Mock download functionality
     showSuccess("Session notes downloaded successfully!");
+  };
+
+  const generateCertificate = (session: Session) => {
+    setCertificateSession(session);
   };
 
   return (
@@ -94,7 +146,12 @@ export const SessionHistory: React.FC = () => {
         {/* Sessions */}
         <div className="bg-white rounded-lg shadow">
           <div className="p-6">
-            {completedSessions.length > 0 ? (
+            {isLoading ? (
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <p className="text-gray-600">Loading session history...</p>
+              </div>
+            ) : completedSessions.length > 0 ? (
               <div className="space-y-6">
                 {completedSessions.map((session) => (
                   <SessionCard
@@ -102,6 +159,7 @@ export const SessionHistory: React.FC = () => {
                     session={session}
                     onLeaveFeedback={handleLeaveFeedback}
                     onDownloadNotes={downloadNotes}
+                    onGenerateCertificate={generateCertificate}
                   />
                 ))}
               </div>
@@ -198,6 +256,28 @@ export const SessionHistory: React.FC = () => {
           </div>
         )}
       </Modal>
+
+      {/* Certificate Generation Modal */}
+      <Modal
+        isOpen={!!certificateSession}
+        onClose={() => setCertificateSession(null)}
+        title="Generate Certificate"
+      >
+        {certificateSession && (
+          <CertificateGenerator
+            sessionData={{
+              learnerName: "Current User", // In real app, get from auth context
+              mentorName: certificateSession.mentorName || "Mentor",
+              sessionTopic: certificateSession.topic || "Learning Session",
+              sessionDate: certificateSession.date,
+              duration: certificateSession.duration || 60,
+              skills: certificateSession.skills || [],
+              sessionId: certificateSession.id,
+            }}
+            onClose={() => setCertificateSession(null)}
+          />
+        )}
+      </Modal>
     </Layout>
   );
 };
@@ -206,12 +286,14 @@ interface SessionCardProps {
   session: Session;
   onLeaveFeedback: (session: Session) => void;
   onDownloadNotes: (session: Session) => void;
+  onGenerateCertificate: (session: Session) => void;
 }
 
 const SessionCard: React.FC<SessionCardProps> = ({
   session,
   onLeaveFeedback,
   onDownloadNotes,
+  onGenerateCertificate,
 }) => {
   return (
     <div className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
@@ -307,6 +389,16 @@ const SessionCard: React.FC<SessionCardProps> = ({
           >
             <Download className="h-4 w-4 mr-2" />
             Download Notes
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onGenerateCertificate(session)}
+            className="flex items-center"
+          >
+            <Award className="h-4 w-4 mr-2" />
+            Certificate
           </Button>
         </div>
       </div>

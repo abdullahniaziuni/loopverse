@@ -68,13 +68,24 @@ export const MyBookings: React.FC = () => {
     setCancellingSession(session);
   };
 
-  const confirmCancellation = () => {
-    if (cancellingSession) {
-      // Mock cancellation
-      showSuccess(
-        "Session cancelled successfully. You will receive a confirmation email."
-      );
-      setCancellingSession(null);
+  const confirmCancellation = async () => {
+    if (!cancellingSession) return;
+    try {
+      const res = await apiService.cancelSession(cancellingSession.id);
+      if (res.success) {
+        showSuccess("Session cancelled successfully.");
+        setSessions((prev) =>
+          prev.map((s) =>
+            s.id === cancellingSession.id ? { ...s, status: "cancelled" } : s
+          )
+        );
+        setCancellingSession(null);
+      } else {
+        showError(res.error || "Failed to cancel session");
+      }
+    } catch (err) {
+      console.error("Cancel session error", err);
+      showError("Failed to cancel session");
     }
   };
 
@@ -195,7 +206,7 @@ export const MyBookings: React.FC = () => {
                 <div className="flex justify-between">
                   <span className="text-gray-600">Date & Time:</span>
                   <span className="font-medium">
-                    {formatDate(cancellingSession.date)} at{" "}
+                    {formatDate(cancellingSession.startTime)} at{" "}
                     {formatTime(cancellingSession.startTime)}
                   </span>
                 </div>
@@ -241,7 +252,7 @@ const SessionCard: React.FC<SessionCardProps> = ({
   onJoin,
 }) => {
   const isUpcoming = session.status === "confirmed";
-  const sessionDate = new Date(session.date);
+  const sessionDate = new Date(session.startTime);
   const now = new Date();
   const isToday = sessionDate.toDateString() === now.toDateString();
   const canJoin = isToday && isUpcoming;
@@ -272,7 +283,7 @@ const SessionCard: React.FC<SessionCardProps> = ({
 
           <div className="flex items-center text-gray-600 mb-2">
             <Calendar className="h-4 w-4 mr-2" />
-            <span>{formatDate(session.date)}</span>
+            <span>{formatDate(session.startTime)}</span>
           </div>
 
           <div className="flex items-center text-gray-600">

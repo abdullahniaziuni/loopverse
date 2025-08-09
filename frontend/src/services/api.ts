@@ -25,13 +25,21 @@ class ApiService {
   }
 
   // Helper method to set authorization header
-  private getHeaders(): HeadersInit {
-    const headers: HeadersInit = {
-      "Content-Type": "application/json",
-    };
+  private getHeaders(
+    extra: { admin?: boolean; formData?: boolean } = {}
+  ): HeadersInit {
+    const headers: HeadersInit = {};
+
+    // Only set JSON content-type when not sending FormData
+    if (!extra.formData) {
+      headers["Content-Type"] = "application/json";
+    }
 
     if (this.token) {
+      // Standard auth header for most routes
       headers["Authorization"] = `Bearer ${this.token}`;
+      // Admin middleware expects x-auth-token
+      if (extra.admin) headers["x-auth-token"] = this.token;
     }
 
     return headers;
@@ -52,7 +60,10 @@ class ApiService {
       const response = await fetch(url, {
         ...options,
         headers: {
-          ...this.getHeaders(),
+          ...this.getHeaders({
+            admin: endpoint.startsWith("/admin"),
+            formData: options.body instanceof FormData,
+          }),
           ...options.headers,
         },
       });
@@ -156,25 +167,28 @@ class ApiService {
     });
   }
 
-  // User profile endpoints
-  async updateProfile(profileData: Partial<User>): Promise<ApiResponse<User>> {
-    return this.request("/users/profile", {
+  // User profile endpoints (role-aware; caller should pass correct path)
+  async updateProfile(
+    profileData: Partial<User> & { role?: "learner" | "mentor" }
+  ): Promise<ApiResponse<User>> {
+    const role = profileData.role || "learner"; // default
+    const path = role === "mentor" ? "/mentors/profile" : "/learners/profile";
+    const { role: _omit, ...body } = profileData as any;
+    return this.request(path, {
       method: "PUT",
-      body: JSON.stringify(profileData),
+      body: JSON.stringify(body),
     });
   }
 
-  async uploadAvatar(file: File): Promise<ApiResponse<{ avatarUrl: string }>> {
+  async uploadAvatar(file: File): Promise<ApiResponse<{ url: string }>> {
     const formData = new FormData();
-    formData.append("avatar", file);
+    formData.append("file", file);
+    formData.append("type", "avatar");
 
-    return this.request("/users/avatar", {
+    return this.request("/upload", {
       method: "POST",
       body: formData,
-      headers: {
-        Authorization: `Bearer ${this.token}`,
-        // Don't set Content-Type for FormData
-      },
+      headers: this.getHeaders({ formData: true }),
     });
   }
 
@@ -223,22 +237,13 @@ class ApiService {
     return result;
   }
 
-  async getMentorAvailability(
-    mentorId: string,
-    date?: string
-  ): Promise<ApiResponse<AvailabilitySlot[]>> {
-    const endpoint = `/mentors/${mentorId}/availability${
-      date ? `?date=${date}` : ""
-    }`;
-    return this.request(endpoint);
-  }
-
+  // Availability is part of mentor profile; no separate GET route exists
   async updateMentorAvailability(
-    slots: AvailabilitySlot[]
+    availability: AvailabilitySlot[]
   ): Promise<ApiResponse<AvailabilitySlot[]>> {
     return this.request("/mentors/availability", {
       method: "PUT",
-      body: JSON.stringify({ slots }),
+      body: JSON.stringify({ availability }),
     });
   }
 
@@ -313,16 +318,20 @@ class ApiService {
   }
 
   async cancelSession(id: string, reason?: string): Promise<ApiResponse<void>> {
-    return this.request(`/sessions/${id}/cancel`, {
-      method: "POST",
-      body: JSON.stringify({ reason }),
+    // Backend expects status update
+    return this.request(`/sessions/${id}/status`, {
+      method: "PUT",
+      body: JSON.stringify({ status: "cancelled", reason }),
     });
   }
 
   // Booking endpoints
   async createBookingRequest(bookingData: {
     mentorId: string;
-    slotId: string;
+    startTime: string;
+    duration: number;
+    title: string;
+    description?: string;
     message?: string;
   }): Promise<ApiResponse<BookingRequest>> {
     return this.request("/bookings", {
@@ -371,9 +380,13 @@ class ApiService {
       comment?: string;
     }
   ): Promise<ApiResponse<SessionFeedback>> {
+    // Backend expects { content, rating }
     return this.request(`/sessions/${sessionId}/feedback`, {
       method: "POST",
-      body: JSON.stringify(feedback),
+      body: JSON.stringify({
+        content: feedback.comment || "",
+        rating: feedback.rating,
+      }),
     });
   }
 
@@ -381,23 +394,53 @@ class ApiService {
     return this.request(`/sessions/${sessionId}/feedback`);
   }
 
+  async updateSessionStatus(
+    sessionId: string,
+    status: string
+  ): Promise<ApiResponse<void>> {
+    return this.request(`/sessions/${sessionId}/status`, {
+      method: "PUT",
+      body: JSON.stringify({ status }),
+    });
+  }
+
+  async getSessionSummary(sessionId: string): Promise<ApiResponse<any>> {
+    return this.request(`/sessions/${sessionId}/summary`);
+  }
+
+  async generateSessionSummary(sessionId: string): Promise<ApiResponse<any>> {
+    return this.request(`/sessions/${sessionId}/summary`, {
+      method: "POST",
+    });
+  }
+
+  async getUserProgress(
+    userId?: string,
+    timeRange: string = "30d"
+  ): Promise<ApiResponse<any>> {
+    const params = new URLSearchParams({ timeRange });
+    if (userId) params.append("userId", userId);
+
+    return this.request(`/analytics/progress?${params.toString()}`);
+  }
+
   // Admin endpoints
   async getDashboardStats(): Promise<ApiResponse<DashboardStats>> {
-    return this.request("/admin/stats");
+    return this.request("/admin/dashboard");
   }
 
   async getPendingMentorApplications(): Promise<ApiResponse<any[]>> {
-    return this.request("/admin/mentor-applications");
+    return this.request("/admin/mentors/pending");
   }
 
   async approveMentorApplication(
-    applicationId: string,
+    mentorId: string,
     approved: boolean,
     comments?: string
   ): Promise<ApiResponse<void>> {
-    return this.request(`/admin/mentor-applications/${applicationId}`, {
+    return this.request(`/admin/mentors/${mentorId}/verify`, {
       method: "PUT",
-      body: JSON.stringify({ approved, comments }),
+      body: JSON.stringify({ isVerified: approved, comments }),
     });
   }
 
@@ -431,17 +474,22 @@ class ApiService {
 
   // AI endpoints
   async generateSessionSummary(
-    sessionId: string
+    sessionId: string,
+    payload?: { notes?: string; topics?: string; duration?: number }
   ): Promise<ApiResponse<{ summary: string }>> {
     return this.request(`/ai/sessions/${sessionId}/summary`, {
       method: "POST",
+      body: JSON.stringify(payload || {}),
     });
   }
 
   async getRecommendations(
     type: "mentors" | "topics"
-  ): Promise<ApiResponse<any[]>> {
-    return this.request(`/ai/recommendations/${type}`);
+  ): Promise<ApiResponse<{ recommendations: string; type: string }>> {
+    return this.request(`/ai/recommendations`, {
+      method: "POST",
+      body: JSON.stringify({ type }),
+    });
   }
 
   // File upload endpoints
@@ -497,11 +545,12 @@ class ApiService {
 
   // Additional admin and mentor endpoints
   async getAllSessions(): Promise<ApiResponse<Session[]>> {
-    return this.request("/admin/sessions");
+    // No dedicated admin sessions route; use search endpoint instead if needed
+    return this.request("/search/sessions");
   }
 
   async getMentorSessions(): Promise<ApiResponse<Session[]>> {
-    return this.request("/mentor/sessions");
+    return this.request("/mentors/sessions");
   }
 
   async getPendingBookings(): Promise<ApiResponse<any[]>> {

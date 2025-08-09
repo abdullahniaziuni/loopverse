@@ -7,6 +7,7 @@ import {
   MapPin,
   Award,
   MessageCircle,
+  Share2,
 } from "lucide-react";
 import { Layout } from "../../components/layout";
 import { Button, Modal } from "../../components/ui";
@@ -14,6 +15,7 @@ import { formatDate, formatTime } from "../../utils";
 import { useToast } from "../../hooks/useToast";
 import { apiService } from "../../services/api";
 import { Mentor } from "../../types";
+import { RatingDisplay, FeedbackSummary } from "../../components/feedback";
 
 export const MentorProfile: React.FC = () => {
   const { mentorId } = useParams<{ mentorId: string }>();
@@ -24,6 +26,62 @@ export const MentorProfile: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   const { success: showSuccess, error: showError } = useToast();
+
+  const shareProfile = async () => {
+    const publicUrl = `${window.location.origin}/mentor/${mentorId}/public`;
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: `${mentor?.name} - SkillSphere Mentor`,
+          text: `Check out ${mentor?.name}'s mentor profile on SkillSphere`,
+          url: publicUrl,
+        });
+      } else {
+        await navigator.clipboard.writeText(publicUrl);
+        showSuccess('Public profile link copied to clipboard!');
+      }
+    } catch (err) {
+      console.error('Error sharing profile:', err);
+      showError('Failed to share profile');
+    }
+  };
+
+  // Compute simple available slots for next 7 days from mentor.availability (UTC-based)
+  const availableSlots = React.useMemo(() => {
+    if (!mentor?.availability)
+      return [] as {
+        id: string;
+        date: string;
+        startTime: string;
+        endTime: string;
+      }[];
+    const slots: {
+      id: string;
+      date: string;
+      startTime: string;
+      endTime: string;
+    }[] = [];
+    const now = new Date();
+    for (let d = 0; d < 14; d++) {
+      const day = new Date(now);
+      day.setDate(now.getDate() + d);
+      const dayOfWeek = day.getDay();
+      const dateStr = day.toISOString().split("T")[0];
+      mentor.availability
+        .filter((s: any) => s.dayOfWeek === dayOfWeek)
+        .forEach((s: any, idx: number) => {
+          slots.push({
+            id: `${dateStr}-${idx}`,
+            date: dateStr,
+            startTime: s.startTime,
+            endTime: s.endTime,
+          });
+        });
+      if (slots.length >= 12) break;
+    }
+    return slots;
+  }, [mentor?.availability]);
 
   // Fetch mentor data
   useEffect(() => {
@@ -66,14 +124,6 @@ export const MentorProfile: React.FC = () => {
     return <Navigate to="/mentors" replace />;
   }
 
-  // Mock available slots
-  const availableSlots = [
-    { id: "1", date: "2024-08-15", startTime: "14:00", endTime: "15:00" },
-    { id: "2", date: "2024-08-16", startTime: "10:00", endTime: "11:00" },
-    { id: "3", date: "2024-08-17", startTime: "16:00", endTime: "17:00" },
-    { id: "4", date: "2024-08-18", startTime: "11:00", endTime: "12:00" },
-  ];
-
   const handleBookSession = (slot: any) => {
     setSelectedSlot(slot);
     setIsBookingModalOpen(true);
@@ -94,18 +144,14 @@ export const MentorProfile: React.FC = () => {
       });
 
       const bookingData = {
-        mentorId: mentor.id,
+        mentorId: mentor.id || mentor._id,
         startTime: `${selectedSlot.date}T${selectedSlot.startTime}:00.000Z`,
         duration: 60, // 1 hour default
         title: `Session with ${mentor.name}`,
         description: "Mentoring session",
-        timezone: "UTC",
       };
 
-      const response = await apiService.request("/bookings", {
-        method: "POST",
-        body: JSON.stringify(bookingData),
-      });
+      const response = await apiService.createBookingRequest(bookingData);
 
       console.log("📅 MentorProfile - Booking response:", response);
 
@@ -147,15 +193,15 @@ export const MentorProfile: React.FC = () => {
                 {mentor.name}
               </h1>
               <div className="flex items-center mt-2">
-                <div className="flex items-center">
-                  <Star className="h-5 w-5 text-yellow-400 fill-current" />
-                  <span className="text-lg font-medium text-gray-900 ml-1">
-                    {mentor.rating}
-                  </span>
-                  <span className="text-gray-600 ml-2">
-                    ({mentor.totalSessions} sessions completed)
-                  </span>
-                </div>
+                <RatingDisplay
+                  rating={mentor.rating || 0}
+                  size="lg"
+                  showText={true}
+                  className="mr-4"
+                />
+                <span className="text-gray-600">
+                  ({mentor.totalSessions} sessions completed)
+                </span>
               </div>
               <div className="flex items-center mt-2 text-gray-600">
                 <Award className="h-4 w-4 mr-1" />
@@ -168,6 +214,22 @@ export const MentorProfile: React.FC = () => {
               </div>
               <div className="text-sm text-gray-600">per hour</div>
             </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex flex-wrap gap-3 mt-6 pt-6 border-t border-gray-200">
+            <Button className="flex items-center">
+              <Calendar className="h-4 w-4 mr-2" />
+              Book Session
+            </Button>
+            <Button variant="outline" className="flex items-center">
+              <MessageCircle className="h-4 w-4 mr-2" />
+              Message
+            </Button>
+            <Button variant="outline" onClick={shareProfile} className="flex items-center">
+              <Share2 className="h-4 w-4 mr-2" />
+              Share Profile
+            </Button>
           </div>
         </div>
 
@@ -202,50 +264,65 @@ export const MentorProfile: React.FC = () => {
             {/* Reviews */}
             <div className="bg-white rounded-lg shadow p-6">
               <h2 className="text-xl font-semibold text-gray-900 mb-4">
-                Recent Reviews
+                Student Feedback
               </h2>
+
+              {/* Feedback Summary */}
+              <FeedbackSummary
+                averageRating={mentor.rating || 0}
+                totalReviews={mentor.totalSessions || 0}
+                className="mb-6"
+              />
+
+              {/* Recent Reviews */}
               <div className="space-y-4">
-                {/* Mock reviews */}
-                <div className="border-b border-gray-200 pb-4">
-                  <div className="flex items-center mb-2">
-                    <div className="flex items-center">
-                      {[...Array(5)].map((_, i) => (
-                        <Star
-                          key={i}
-                          className="h-4 w-4 text-yellow-400 fill-current"
-                        />
-                      ))}
+                <h3 className="text-lg font-medium text-gray-900 mb-3">Recent Reviews</h3>
+                {(mentor.reviews || [])
+                  .slice(0, 3)
+                  .map((rev: any, idx: number) => (
+                    <div key={idx} className="border-b border-gray-200 pb-4 last:border-b-0">
+                      <div className="flex items-center mb-2">
+                        <RatingDisplay rating={rev.rating || 5} size="sm" className="mr-2" />
+                        <span className="text-sm text-gray-600">
+                          {rev.learnerName || 'Anonymous'} • {formatDate(rev.date || new Date().toISOString())}
+                        </span>
+                      </div>
+                      <p className="text-gray-700 text-sm">
+                        {rev.comment || "Great session! Very helpful and knowledgeable mentor."}
+                      </p>
                     </div>
-                    <span className="text-sm text-gray-600 ml-2">
-                      2 days ago
-                    </span>
-                  </div>
-                  <p className="text-gray-700">
-                    "Excellent session! {mentor.name} explained complex concepts
-                    very clearly and provided practical examples."
+                  ))}
+
+                {(!mentor.reviews || mentor.reviews.length === 0) && (
+                  <p className="text-gray-500 text-center py-4">
+                    No reviews yet. Be the first to book a session!
                   </p>
-                  <p className="text-sm text-gray-500 mt-1">- Sarah K.</p>
-                </div>
-                <div className="border-b border-gray-200 pb-4">
-                  <div className="flex items-center mb-2">
-                    <div className="flex items-center">
-                      {[...Array(5)].map((_, i) => (
-                        <Star
-                          key={i}
-                          className="h-4 w-4 text-yellow-400 fill-current"
-                        />
-                      ))}
+                )}
+              </div>
+            </div>
+                              key={i}
+                              className={`h-4 w-4 ${
+                                i < Math.round(rev.rating || 0)
+                                  ? "text-yellow-400 fill-yellow-400"
+                                  : "text-gray-300"
+                              }`}
+                            />
+                          ))}
+                        </div>
+                        <span className="text-sm text-gray-600 ml-2">
+                          {new Date(
+                            rev.date || rev.submittedAt || Date.now()
+                          ).toDateString()}
+                        </span>
+                      </div>
+                      <p className="text-gray-700">
+                        {rev.comment || rev.content}
+                      </p>
                     </div>
-                    <span className="text-sm text-gray-600 ml-2">
-                      1 week ago
-                    </span>
-                  </div>
-                  <p className="text-gray-700">
-                    "Great mentor with deep knowledge. Very patient and helpful
-                    throughout the session."
-                  </p>
-                  <p className="text-sm text-gray-500 mt-1">- Mike R.</p>
-                </div>
+                  ))}
+                {(mentor.reviews || []).length === 0 && (
+                  <p className="text-gray-500">No reviews yet.</p>
+                )}
               </div>
             </div>
           </div>

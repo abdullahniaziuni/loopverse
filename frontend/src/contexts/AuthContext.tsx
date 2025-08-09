@@ -7,6 +7,7 @@ import React, {
 } from "react";
 import { User, AuthContextType, SignupForm } from "../types";
 import { apiService } from "../services/api";
+import { webSocketService } from "../services/websocket";
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -91,6 +92,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         localStorage.setItem("skillsphere_user", JSON.stringify(user));
         localStorage.setItem("auth_token", token);
         console.log("💾 AuthContext.login - Data saved to localStorage");
+
+        // Connect to WebSocket
+        webSocketService.connect(token);
+        console.log("🔌 AuthContext.login - WebSocket connection initiated");
       } else {
         console.error("❌ AuthContext.login - Login failed");
         console.error("📄 Response:", response);
@@ -181,6 +186,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       apiService.clearToken();
       localStorage.removeItem("skillsphere_user");
       localStorage.removeItem("auth_token");
+
+      // Disconnect WebSocket
+      webSocketService.disconnect();
+      console.log("🔌 AuthContext.logout - WebSocket disconnected");
     }
   };
 

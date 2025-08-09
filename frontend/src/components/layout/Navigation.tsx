@@ -3,11 +3,16 @@ import { Link, useLocation } from "react-router-dom";
 import { Menu, X, User, LogOut } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { Button } from "../ui/Button";
+import { NotificationBadge, NotificationCenter } from "../notifications";
+import { useNotifications } from "../../hooks/useWebSocket";
+import { CompactThemeToggle } from "../ui";
 
 export const Navigation: React.FC = () => {
   const { user, logout } = useAuth();
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const { unreadCount } = useNotifications();
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -94,6 +99,15 @@ export const Navigation: React.FC = () => {
           <div className="flex items-center space-x-4">
             {user ? (
               <div className="flex items-center space-x-4">
+                {/* Theme Toggle */}
+                <CompactThemeToggle />
+
+                {/* Notifications */}
+                <NotificationBadge
+                  count={unreadCount}
+                  onClick={() => setShowNotifications(true)}
+                />
+
                 <div className="hidden md:flex items-center space-x-2">
                   <User className="h-5 w-5 text-gray-400" />
                   <span className="text-sm text-gray-700">{user.name}</span>
@@ -202,6 +216,12 @@ export const Navigation: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Notification Center */}
+      <NotificationCenter
+        isOpen={showNotifications}
+        onClose={() => setShowNotifications(false)}
+      />
     </nav>
   );
 };

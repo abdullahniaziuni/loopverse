@@ -8,6 +8,7 @@ import { MessageCenter } from '../components/messaging';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
 import { apiService } from '../services/api';
+import { SessionFeedback } from '../components/feedback';
 
 interface SessionData {
   id: string;
@@ -39,6 +40,7 @@ export const SessionRoom: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'video' | 'chat' | 'notes'>('video');
   const [showEndSessionModal, setShowEndSessionModal] = useState(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
 
   // Fetch session data
   useEffect(() => {
@@ -49,26 +51,32 @@ export const SessionRoom: React.FC = () => {
         console.log('🎯 SessionRoom - Fetching session data:', sessionId);
         setIsLoading(true);
 
-        // For now, we'll create mock data since we don't have a session detail endpoint
-        // TODO: Replace with real API call
-        const mockSession: SessionData = {
-          id: sessionId,
-          title: 'React Hooks Deep Dive',
-          description: 'Learn advanced React hooks patterns and best practices',
-          mentor: {
-            id: 'mentor1',
-            name: 'Sarah Johnson',
-            profilePicture: '/api/placeholder/40/40',
-          },
-          learner: {
-            id: 'learner1',
-            name: 'Alice Johnson',
-            profilePicture: '/api/placeholder/40/40',
-          },
-          startTime: new Date().toISOString(),
-          endTime: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-          status: 'confirmed',
-        };
+        // Fetch real session data from API
+        const response = await apiService.getSessionById(sessionId);
+        if (response.success && response.data) {
+          const sessionData = response.data;
+          const mockSession: SessionData = {
+            id: sessionData.id || sessionData._id,
+            title: sessionData.title || 'Session',
+            description: sessionData.description || 'Learning session',
+            mentor: {
+              id: sessionData.mentorId?._id || sessionData.mentorId,
+              name: sessionData.mentorId?.firstName && sessionData.mentorId?.lastName
+                ? `${sessionData.mentorId.firstName} ${sessionData.mentorId.lastName}`
+                : 'Mentor',
+              profilePicture: sessionData.mentorId?.profilePicture || '/api/placeholder/40/40',
+            },
+            learner: {
+              id: sessionData.learnerId?._id || sessionData.learnerId,
+              name: sessionData.learnerId?.firstName && sessionData.learnerId?.lastName
+                ? `${sessionData.learnerId.firstName} ${sessionData.learnerId.lastName}`
+                : 'Learner',
+              profilePicture: sessionData.learnerId?.profilePicture || '/api/placeholder/40/40',
+            },
+            startTime: sessionData.startTime,
+            endTime: sessionData.endTime,
+            status: sessionData.status || 'confirmed',
+          };
 
         setSession(mockSession);
         console.log('✅ SessionRoom - Session data loaded:', mockSession);
@@ -86,14 +94,42 @@ export const SessionRoom: React.FC = () => {
   const handleEndSession = async () => {
     try {
       console.log('🏁 SessionRoom - Ending session:', sessionId);
-      
-      // TODO: Implement actual session end API call
+
+      // Update session status to completed
+      await updateSessionStatus('completed');
+
       showSuccess('Session ended successfully');
       setShowEndSessionModal(false);
-      navigate('/dashboard');
+
+      // Show feedback modal for learners
+      if (user?.role === 'learner') {
+        setShowFeedbackModal(true);
+      } else {
+        navigate('/dashboard');
+      }
     } catch (error) {
       console.error('💥 SessionRoom - Error ending session:', error);
       showError('Failed to end session');
+    }
+  };
+
+  const handleFeedbackSubmitted = () => {
+    setShowFeedbackModal(false);
+    navigate('/dashboard');
+  };
+
+  const updateSessionStatus = async (status: string) => {
+    if (!sessionId) return;
+
+    try {
+      const response = await apiService.updateSessionStatus(sessionId, status);
+      if (response.success) {
+        console.log(`✅ Session status updated to: ${status}`);
+      } else {
+        console.error('❌ Failed to update session status:', response.error);
+      }
+    } catch (error) {
+      console.error('❌ Error updating session status:', error);
     }
   };
 
@@ -231,17 +267,29 @@ export const SessionRoom: React.FC = () => {
         {/* Tab Content */}
         <div className="bg-white rounded-lg shadow">
           {activeTab === 'video' && (
-            <VideoCallManager
-              sessionId={session.id}
-              currentUserId={user.id}
-              currentUserName={user.name}
-              currentUserRole={user.role as 'mentor' | 'learner'}
-              onCallEnd={() => {
-                if (isUserMentor) {
-                  setShowEndSessionModal(true);
-                }
-              }}
-            />
+            <div className="h-96 p-6">
+              <div className="bg-gray-100 rounded-lg h-full flex items-center justify-center">
+                <div className="text-center">
+                  <Video className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    Ready to start the video call?
+                  </h3>
+                  <p className="text-gray-600 mb-4">
+                    Click the button below to join the video session
+                  </p>
+                  <Button
+                    onClick={() => {
+                      updateSessionStatus('started');
+                      window.open(`/video-call/${sessionId}`, '_blank');
+                    }}
+                    className="px-6 py-2"
+                  >
+                    <Video className="h-4 w-4 mr-2" />
+                    Join Video Call
+                  </Button>
+                </div>
+              </div>
+            </div>
           )}
           
           {activeTab === 'chat' && (
@@ -299,6 +347,17 @@ export const SessionRoom: React.FC = () => {
             </div>
           </div>
         </Modal>
+
+        {/* Feedback Modal */}
+        {session && (
+          <SessionFeedback
+            sessionId={sessionId!}
+            mentorName={session.mentor.name}
+            isOpen={showFeedbackModal}
+            onClose={() => setShowFeedbackModal(false)}
+            onSubmitted={handleFeedbackSubmitted}
+          />
+        )}
       </div>
     </Layout>
   );

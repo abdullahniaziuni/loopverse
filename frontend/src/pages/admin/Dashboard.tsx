@@ -42,10 +42,13 @@ export const AdminDashboard: React.FC = () => {
           setPendingMentors(allMentors.filter((m) => !m.isVerified));
         }
 
-        // Fetch all sessions
-        const sessionsResponse = await apiService.getAllSessions();
+        // Fetch all sessions for admin view
+        const sessionsResponse = await apiService.getSessions({
+          page: 1,
+          limit: 100, // Get more sessions for admin overview
+        });
         if (sessionsResponse.success && sessionsResponse.data) {
-          setSessions(sessionsResponse.data);
+          setSessions(sessionsResponse.data.sessions || sessionsResponse.data);
         }
       } catch (error) {
         console.error("Error fetching dashboard data:", error);

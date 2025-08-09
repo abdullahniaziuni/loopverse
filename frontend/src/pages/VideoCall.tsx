@@ -17,11 +17,19 @@ import {
   VolumeX,
   Bot,
   FileText,
+  BarChart3,
+  Paperclip,
+  Circle,
 } from "lucide-react";
 import { Button } from "../components/ui";
 import { useAuth } from "../contexts/AuthContext";
 import { AIAssistant } from "../components/ai/AIAssistant";
 import { SessionNotesManager } from "../components/ai/SessionNotesManager";
+import { SessionSummary } from "../components/ai/SessionSummary";
+import { FileSharing, SessionRecording } from "../components/session";
+import { useSessionWebSocket } from "../hooks/useWebSocket";
+import { useWebRTC } from "../hooks/useWebRTC";
+import { useToast } from "../hooks/useToast";
 
 interface CallState {
   isVideoEnabled: boolean;
@@ -48,41 +56,96 @@ export const VideoCall: React.FC = () => {
   const { user } = useAuth();
   const { showSuccess, showError } = useToast();
 
-  const localVideoRef = useRef<HTMLVideoElement>(null);
-  const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const chatInputRef = useRef<HTMLInputElement>(null);
 
-  const [callState, setCallState] = useState<CallState>({
-    isVideoEnabled: true,
-    isAudioEnabled: true,
-    isScreenSharing: false,
+  const [uiState, setUIState] = useState({
     isChatOpen: false,
     isFullscreen: false,
-    isMuted: false,
     callDuration: 0,
-    connectionStatus: "connecting",
   });
 
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
   const [showSessionNotes, setShowSessionNotes] = useState(false);
+  const [showSessionSummary, setShowSessionSummary] = useState(false);
+  const [showFileSharing, setShowFileSharing] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  const [showRecordingPanel, setShowRecordingPanel] = useState(false);
   const [participants] = useState([
     { id: "1", name: "John Doe", role: "mentor", isConnected: true },
     { id: "2", name: user?.name || "You", role: "learner", isConnected: true },
   ]);
 
-  // Simulate call duration timer
+  // WebSocket integration for real-time messaging
+  const {
+    messages: wsMessages,
+    sendMessage,
+    setMessages,
+  } = useSessionWebSocket(sessionId || null);
+
+  // WebRTC integration for video calling
+  const {
+    callState,
+    localVideoRef,
+    remoteVideoRef,
+    isCallActive,
+    error: webrtcError,
+    startCall,
+    endCall: endWebRTCCall,
+    toggleVideo,
+    toggleAudio,
+    startScreenShare,
+    stopScreenShare,
+    isConnected,
+    isVideoEnabled,
+    isAudioEnabled,
+    isScreenSharing,
+  } = useWebRTC({
+    sessionId: sessionId || "",
+    isInitiator: user?.role === "mentor", // Mentor initiates the call
+    autoStart: false, // Manual start
+  });
+
+  // Call duration timer
   useEffect(() => {
+    if (!isCallActive) return;
+
     const timer = setInterval(() => {
-      setCallState((prev) => ({
+      setUIState((prev) => ({
         ...prev,
         callDuration: prev.callDuration + 1,
       }));
     }, 1000);
 
     return () => clearInterval(timer);
-  }, []);
+  }, [isCallActive]);
+
+  // Recording duration timer
+  useEffect(() => {
+    if (!isRecording) return;
+
+    const timer = setInterval(() => {
+      setRecordingDuration((prev) => prev + 1);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [isRecording]);
+
+  // Sync WebSocket messages with chat
+  useEffect(() => {
+    if (wsMessages.length > 0) {
+      const formattedMessages: ChatMessage[] = wsMessages.map((msg) => ({
+        id: msg.id,
+        sender: msg.senderName,
+        message: msg.message,
+        timestamp: new Date(msg.timestamp),
+        isOwn: msg.senderId === user?.id,
+      }));
+      setChatMessages(formattedMessages);
+    }
+  }, [wsMessages, user?.id]);
 
   // Format call duration
   const formatDuration = (seconds: number) => {
@@ -93,32 +156,24 @@ export const VideoCall: React.FC = () => {
       .padStart(2, "0")}`;
   };
 
-  const toggleVideo = () => {
-    setCallState((prev) => ({
-      ...prev,
-      isVideoEnabled: !prev.isVideoEnabled,
-    }));
-    // TODO: Implement actual video toggle with WebRTC
+  const handleToggleVideo = async () => {
+    await toggleVideo();
   };
 
-  const toggleAudio = () => {
-    setCallState((prev) => ({
-      ...prev,
-      isAudioEnabled: !prev.isAudioEnabled,
-    }));
-    // TODO: Implement actual audio toggle with WebRTC
+  const handleToggleAudio = async () => {
+    await toggleAudio();
   };
 
-  const toggleScreenShare = () => {
-    setCallState((prev) => ({
-      ...prev,
-      isScreenSharing: !prev.isScreenSharing,
-    }));
-    // TODO: Implement screen sharing with WebRTC
+  const handleToggleScreenShare = async () => {
+    if (isScreenSharing) {
+      await stopScreenShare();
+    } else {
+      await startScreenShare();
+    }
   };
 
   const toggleChat = () => {
-    setCallState((prev) => ({
+    setUIState((prev) => ({
       ...prev,
       isChatOpen: !prev.isChatOpen,
     }));
@@ -127,38 +182,62 @@ export const VideoCall: React.FC = () => {
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen();
-      setCallState((prev) => ({ ...prev, isFullscreen: true }));
+      setUIState((prev) => ({ ...prev, isFullscreen: true }));
     } else {
       document.exitFullscreen();
-      setCallState((prev) => ({ ...prev, isFullscreen: false }));
+      setUIState((prev) => ({ ...prev, isFullscreen: false }));
     }
   };
 
-  const endCall = () => {
-    // TODO: Implement call ending logic
+  const handleStartCall = async () => {
+    try {
+      await startCall();
+      showSuccess("Call started successfully");
+    } catch (error) {
+      showError("Failed to start call");
+    }
+  };
+
+  const handleEndCall = () => {
+    if (isRecording) {
+      setIsRecording(false);
+      setRecordingDuration(0);
+    }
+    endWebRTCCall();
     showSuccess("Call ended successfully");
     navigate("/learner/dashboard");
   };
 
-  const sendMessage = () => {
-    if (!newMessage.trim()) return;
+  const handleStartRecording = () => {
+    setIsRecording(true);
+    setRecordingDuration(0);
+    showSuccess("Recording started");
+  };
 
-    const message: ChatMessage = {
-      id: Date.now().toString(),
-      sender: user?.name || "You",
-      message: newMessage,
-      timestamp: new Date(),
-      isOwn: true,
-    };
+  const handleStopRecording = () => {
+    setIsRecording(false);
+    showSuccess("Recording stopped");
+  };
 
-    setChatMessages((prev) => [...prev, message]);
+  const handlePauseRecording = () => {
+    showSuccess("Recording paused");
+  };
+
+  const handleResumeRecording = () => {
+    showSuccess("Recording resumed");
+  };
+
+  const sendChatMessage = () => {
+    if (!newMessage.trim() || !sessionId || !user) return;
+
+    // Send message via WebSocket
+    sendMessage(newMessage, user.name || "You", "text");
     setNewMessage("");
-    // TODO: Send message via WebSocket
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
-      sendMessage();
+      sendChatMessage();
     }
   };
 
@@ -174,7 +253,7 @@ export const VideoCall: React.FC = () => {
             </span>
           </div>
           <div className="text-sm text-gray-600">
-            Duration: {formatDuration(callState.callDuration)}
+            Duration: {formatDuration(uiState.callDuration)}
           </div>
         </div>
 
@@ -185,7 +264,7 @@ export const VideoCall: React.FC = () => {
             onClick={toggleFullscreen}
             className="text-gray-600"
           >
-            {callState.isFullscreen ? (
+            {uiState.isFullscreen ? (
               <Minimize className="h-4 w-4" />
             ) : (
               <Maximize className="h-4 w-4" />
@@ -223,7 +302,7 @@ export const VideoCall: React.FC = () => {
               playsInline
               muted
             />
-            {!callState.isVideoEnabled && (
+            {!isVideoEnabled && (
               <div className="absolute inset-0 bg-gray-800 flex items-center justify-center">
                 <VideoOff className="h-8 w-8 text-gray-400" />
               </div>
@@ -257,25 +336,40 @@ export const VideoCall: React.FC = () => {
           </div>
 
           {/* Connection Status */}
-          {callState.connectionStatus !== "connected" && (
+          {!isConnected && isCallActive && (
             <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
               <div className="bg-white rounded-lg p-6 text-center">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
                 <p className="text-gray-900 font-medium">
-                  {callState.connectionStatus === "connecting" &&
+                  {callState.connectionState === "connecting" &&
                     "Connecting..."}
-                  {callState.connectionStatus === "failed" &&
+                  {callState.connectionState === "failed" &&
                     "Connection Failed"}
-                  {callState.connectionStatus === "disconnected" &&
+                  {callState.connectionState === "disconnected" &&
                     "Disconnected"}
+                  {callState.connectionState === "new" && "Initializing..."}
                 </p>
+              </div>
+            </div>
+          )}
+
+          {/* Call Not Started */}
+          {!isCallActive && (
+            <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+              <div className="bg-white rounded-lg p-6 text-center">
+                <p className="text-gray-900 font-medium mb-4">
+                  Ready to start the call?
+                </p>
+                <Button onClick={handleStartCall} className="px-6 py-2">
+                  Start Call
+                </Button>
               </div>
             </div>
           )}
         </div>
 
         {/* Chat Panel */}
-        {callState.isChatOpen && (
+        {uiState.isChatOpen && (
           <div className="w-80 bg-white border-l border-gray-200 flex flex-col">
             <div className="p-4 border-b border-gray-200">
               <h3 className="text-lg font-semibold text-gray-900">Chat</h3>
@@ -320,7 +414,7 @@ export const VideoCall: React.FC = () => {
                   placeholder="Type a message..."
                   className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
-                <Button onClick={sendMessage} size="sm">
+                <Button onClick={sendChatMessage} size="sm">
                   Send
                 </Button>
               </div>
@@ -334,7 +428,7 @@ export const VideoCall: React.FC = () => {
             <SessionNotesManager
               sessionData={{
                 topic: "React Development Session",
-                duration: Math.floor(callState.callDuration / 60),
+                duration: Math.floor(uiState.callDuration / 60),
                 participants: participants.map((p) => ({
                   name: p.name,
                   role: p.role,
@@ -348,18 +442,49 @@ export const VideoCall: React.FC = () => {
             />
           </div>
         )}
+
+        {/* File Sharing Panel */}
+        {showFileSharing && (
+          <div className="w-96 bg-gray-50 border-l border-gray-200 overflow-y-auto p-4">
+            <FileSharing
+              sessionId={sessionId || ""}
+              currentUserId={user?.id || ""}
+              currentUserName={user?.name || ""}
+              onFileShare={(file) => {
+                console.log("File shared:", file);
+                // Here you would typically notify other participants via WebSocket
+              }}
+            />
+          </div>
+        )}
+
+        {/* Recording Panel */}
+        {showRecordingPanel && (
+          <div className="w-96 bg-gray-50 border-l border-gray-200 overflow-y-auto p-4">
+            <SessionRecording
+              sessionId={sessionId || ""}
+              isRecording={isRecording}
+              onStartRecording={handleStartRecording}
+              onStopRecording={handleStopRecording}
+              onPauseRecording={handlePauseRecording}
+              onResumeRecording={handleResumeRecording}
+              recordingDuration={recordingDuration}
+              canRecord={true}
+            />
+          </div>
+        )}
       </div>
 
       {/* Controls */}
       <div className="bg-white border-t border-gray-200 px-6 py-4">
         <div className="flex items-center justify-center space-x-4">
           <Button
-            variant={callState.isAudioEnabled ? "outline" : "danger"}
+            variant={isAudioEnabled ? "outline" : "danger"}
             size="sm"
-            onClick={toggleAudio}
+            onClick={handleToggleAudio}
             className="w-12 h-12 rounded-full"
           >
-            {callState.isAudioEnabled ? (
+            {isAudioEnabled ? (
               <Mic className="h-5 w-5" />
             ) : (
               <MicOff className="h-5 w-5" />
@@ -367,12 +492,12 @@ export const VideoCall: React.FC = () => {
           </Button>
 
           <Button
-            variant={callState.isVideoEnabled ? "outline" : "danger"}
+            variant={isVideoEnabled ? "outline" : "danger"}
             size="sm"
-            onClick={toggleVideo}
+            onClick={handleToggleVideo}
             className="w-12 h-12 rounded-full"
           >
-            {callState.isVideoEnabled ? (
+            {isVideoEnabled ? (
               <Video className="h-5 w-5" />
             ) : (
               <VideoOff className="h-5 w-5" />
@@ -380,16 +505,16 @@ export const VideoCall: React.FC = () => {
           </Button>
 
           <Button
-            variant={callState.isScreenSharing ? "primary" : "outline"}
+            variant={isScreenSharing ? "primary" : "outline"}
             size="sm"
-            onClick={toggleScreenShare}
+            onClick={handleToggleScreenShare}
             className="w-12 h-12 rounded-full"
           >
             <Monitor className="h-5 w-5" />
           </Button>
 
           <Button
-            variant={callState.isChatOpen ? "primary" : "outline"}
+            variant={uiState.isChatOpen ? "primary" : "outline"}
             size="sm"
             onClick={toggleChat}
             className="w-12 h-12 rounded-full"
@@ -416,15 +541,65 @@ export const VideoCall: React.FC = () => {
           </Button>
 
           <Button
+            variant={showSessionSummary ? "primary" : "outline"}
+            size="sm"
+            onClick={() => setShowSessionSummary(!showSessionSummary)}
+            className="w-12 h-12 rounded-full"
+          >
+            <BarChart3 className="h-5 w-5" />
+          </Button>
+
+          <Button
+            variant={showFileSharing ? "primary" : "outline"}
+            size="sm"
+            onClick={() => setShowFileSharing(!showFileSharing)}
+            className="w-12 h-12 rounded-full"
+          >
+            <Paperclip className="h-5 w-5" />
+          </Button>
+
+          <Button
+            variant={isRecording ? "danger" : "outline"}
+            size="sm"
+            onClick={() => setShowRecordingPanel(!showRecordingPanel)}
+            className="w-12 h-12 rounded-full"
+          >
+            <Circle
+              className={`h-5 w-5 ${isRecording ? "fill-current" : ""}`}
+            />
+          </Button>
+
+          <Button
             variant="danger"
             size="sm"
-            onClick={endCall}
+            onClick={handleEndCall}
             className="w-12 h-12 rounded-full bg-red-600 hover:bg-red-700"
           >
             <PhoneOff className="h-5 w-5" />
           </Button>
         </div>
       </div>
+
+      {/* Session Summary */}
+      {showSessionSummary && sessionId && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <SessionSummary
+              sessionId={sessionId}
+              sessionData={{
+                title: "React Development Session",
+                duration: Math.floor(uiState.callDuration / 60),
+                participants: participants.map((p) => ({
+                  name: p.name,
+                  role: p.role,
+                })),
+                topic: "React Development",
+              }}
+              onClose={() => setShowSessionSummary(false)}
+            />
+          </div>
+        </div>
+      )}
 
       {/* AI Assistant */}
       <AIAssistant

@@ -3,11 +3,13 @@ import { User, Bell, Shield, Globe, Palette, Save } from "lucide-react";
 import { Layout } from "../components/layout/Layout";
 import { Button, Input } from "../components/ui";
 import { useAuth } from "../contexts/AuthContext";
-// import { useToast } from "../hooks/useToast";
+import { apiService } from "../services/api";
+import { useToast } from "../hooks/useToast";
+import { NotificationSettings } from "../components/settings";
 
 export const Settings: React.FC = () => {
   const { user } = useAuth();
-  // const { showSuccess } = useToast();
+  const { success: showSuccess, error: showError } = useToast();
 
   const [profile, setProfile] = useState({
     name: user?.name || "",
@@ -17,31 +19,36 @@ export const Settings: React.FC = () => {
     language: "en",
   });
 
-  const [notifications, setNotifications] = useState({
-    emailNotifications: true,
-    pushNotifications: true,
-    sessionReminders: true,
-    marketingEmails: false,
-  });
-
   const [privacy, setPrivacy] = useState({
     profileVisibility: "public",
     showEmail: false,
     allowMessages: true,
   });
 
-  const handleProfileSave = () => {
-    // TODO: Implement profile update
-    showSuccess("Profile updated successfully");
-  };
-
-  const handleNotificationSave = () => {
-    // TODO: Implement notification settings update
-    showSuccess("Notification preferences updated");
+  const handleProfileSave = async () => {
+    try {
+      const payload: any = {
+        name: profile.name,
+        email: profile.email,
+        bio: profile.bio,
+        timezone: profile.timezone,
+        language: profile.language,
+        role: user?.role || "learner",
+      };
+      const res = await apiService.updateProfile(payload);
+      if (res.success) {
+        showSuccess("Profile updated successfully");
+      } else {
+        showError(res.error || "Failed to update profile");
+      }
+    } catch (err) {
+      console.error("Profile update error", err);
+      showError("Failed to update profile");
+    }
   };
 
   const handlePrivacySave = () => {
-    // TODO: Implement privacy settings update
+    // Local-only for now; no backend endpoints defined here
     showSuccess("Privacy settings updated");
   };
 
@@ -147,59 +154,7 @@ export const Settings: React.FC = () => {
           </div>
 
           {/* Notification Settings */}
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-            <div className="flex items-center mb-6">
-              <Bell className="h-5 w-5 text-gray-600 mr-2" />
-              <h2 className="text-xl font-semibold text-gray-900">
-                Notifications
-              </h2>
-            </div>
-
-            <div className="space-y-4">
-              {Object.entries(notifications).map(([key, value]) => (
-                <div key={key} className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-900">
-                      {key
-                        .replace(/([A-Z])/g, " $1")
-                        .replace(/^./, (str) => str.toUpperCase())}
-                    </h3>
-                    <p className="text-sm text-gray-600">
-                      {key === "emailNotifications" &&
-                        "Receive notifications via email"}
-                      {key === "pushNotifications" &&
-                        "Receive push notifications in browser"}
-                      {key === "sessionReminders" &&
-                        "Get reminders before sessions"}
-                      {key === "marketingEmails" &&
-                        "Receive marketing and promotional emails"}
-                    </p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={value}
-                      onChange={(e) =>
-                        setNotifications((prev) => ({
-                          ...prev,
-                          [key]: e.target.checked,
-                        }))
-                      }
-                      className="sr-only peer"
-                    />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                  </label>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-6">
-              <Button onClick={handleNotificationSave}>
-                <Save className="h-4 w-4 mr-2" />
-                Save Notifications
-              </Button>
-            </div>
-          </div>
+          <NotificationSettings />
 
           {/* Privacy Settings */}
           <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">

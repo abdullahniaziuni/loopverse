@@ -12,7 +12,7 @@ import {
 import { Layout } from "../components/layout";
 import { Button } from "../components/ui";
 import { useAuthStore } from "../store";
-import { aiService } from "../services/aiService";
+import { apiService } from "../services/api";
 
 interface AIRecommendation {
   id: string;
@@ -33,43 +33,47 @@ export const AIRecommendations: React.FC = () => {
     []
   );
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"mentors" | "topics" | "all">(
-    "all"
-  );
+  const [activeTab, setActiveTab] = useState<"mentors" | "topics">("mentors");
 
   useEffect(() => {
     fetchRecommendations();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
 
   const fetchRecommendations = async () => {
     setIsLoading(true);
     try {
-      // Generate AI recommendations based on user profile
-      const userProfile = {
-        skills: ["JavaScript", "React", "HTML", "CSS"],
-        goals: [
-          "Learn React Hooks",
-          "Build Full-Stack Apps",
-          "Master State Management",
-        ],
-        experience: "intermediate",
-        preferences: [
-          "Hands-on learning",
-          "Project-based",
-          "Interactive sessions",
-        ],
-      };
+      const type = activeTab === "topics" ? "topics" : "mentors";
 
-      // Fetch AI recommendations from backend
-      const response = await apiService.getAIRecommendations(type);
+      const response = await apiService.getRecommendations(type);
       if (response.success && response.data) {
-        setRecommendations(response.data);
+        // Backend returns a text blob; store as a single item list for now
+        const text = response.data.recommendations || "";
+        const items: AIRecommendation[] = text
+          ? [
+              {
+                id: "rec-1",
+                type: type === "mentors" ? "mentor" : "topic",
+                title:
+                  type === "mentors"
+                    ? "Recommended mentors"
+                    : "Recommended topics",
+                description: text,
+                confidence: 0.8,
+                reasoning:
+                  "AI-generated based on your profile and platform data.",
+                data: {},
+                isViewed: false,
+              },
+            ]
+          : [];
+        setRecommendations(items);
       } else {
-        // Fallback to empty array if AI service is not available
         setRecommendations([]);
       }
     } catch (error) {
       console.error("Failed to fetch recommendations:", error);
+      setRecommendations([]);
     } finally {
       setIsLoading(false);
     }
@@ -161,7 +165,6 @@ export const AIRecommendations: React.FC = () => {
           {/* Tabs */}
           <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
             {[
-              { key: "all", label: "All Recommendations" },
               { key: "mentors", label: "Mentors" },
               { key: "topics", label: "Topics" },
             ].map((tab) => (

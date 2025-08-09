@@ -25,6 +25,7 @@ import { Layout } from "../../components/layout";
 import { Button } from "../../components/ui";
 import { LearningPathGenerator } from "../../components/ai/LearningPathGenerator";
 import { SmartMentorRecommendations } from "../../components/ai/SmartMentorRecommendations";
+import { ProgressTracker } from "../../components/analytics";
 import { formatDate, formatTime } from "../../utils";
 import { apiService } from "../../services/api";
 import { Session } from "../../types";
@@ -44,9 +45,9 @@ export const LearnerDashboard: React.FC = () => {
     const fetchSessions = async () => {
       try {
         setIsLoading(true);
-        const response = await apiService.getUserSessions();
+        const response = await apiService.getSessions();
         if (response.success && response.data) {
-          setSessions(response.data);
+          setSessions(response.data.sessions || response.data);
         }
       } catch (error) {
         console.error("Error fetching sessions:", error);
@@ -414,6 +415,11 @@ export const LearnerDashboard: React.FC = () => {
             )}
           </div>
         </div>
+      </div>
+
+      {/* Progress Tracking Section */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <ProgressTracker />
       </div>
 
       {/* AI Modals */}
