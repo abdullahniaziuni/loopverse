@@ -66,66 +66,64 @@ export const LearnerDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Enhanced Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-          <div className="glass-card rounded-2xl p-6 hover-lift hover-glow group">
+        {/* Clean Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
             <div className="flex items-center">
-              <div className="p-3 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+              <div className="p-3 bg-blue-600 rounded-lg">
                 <BookOpen className="h-6 w-6 text-white" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-semibold text-gray-600">
+                <p className="text-sm font-medium text-gray-600">
                   Total Sessions
                 </p>
-                <p className="text-3xl font-bold gradient-text">
+                <p className="text-2xl font-bold text-gray-900">
                   {stats.totalSessions}
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="glass-card rounded-2xl p-6 hover-lift hover-glow group">
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
             <div className="flex items-center">
-              <div className="p-3 bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+              <div className="p-3 bg-green-600 rounded-lg">
                 <Clock className="h-6 w-6 text-white" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-semibold text-gray-600">
+                <p className="text-sm font-medium text-gray-600">
                   Hours Learned
                 </p>
-                <p className="text-3xl font-bold gradient-text">
+                <p className="text-2xl font-bold text-gray-900">
                   {stats.hoursLearned}
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="glass-card rounded-2xl p-6 hover-lift hover-glow group">
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
             <div className="flex items-center">
-              <div className="p-3 bg-gradient-to-r from-yellow-500 to-orange-600 rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+              <div className="p-3 bg-yellow-600 rounded-lg">
                 <Star className="h-6 w-6 text-white" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-semibold text-gray-600">
-                  Avg Rating
-                </p>
-                <p className="text-3xl font-bold gradient-text">
+                <p className="text-sm font-medium text-gray-600">Avg Rating</p>
+                <p className="text-2xl font-bold text-gray-900">
                   {stats.averageRating}
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="glass-card rounded-2xl p-6 hover-lift hover-glow group">
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
             <div className="flex items-center">
-              <div className="p-3 bg-gradient-to-r from-purple-500 to-pink-600 rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+              <div className="p-3 bg-purple-600 rounded-lg">
                 <Users className="h-6 w-6 text-white" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-semibold text-gray-600">
+                <p className="text-sm font-medium text-gray-600">
                   Active Mentors
                 </p>
-                <p className="text-3xl font-bold gradient-text">
+                <p className="text-2xl font-bold text-gray-900">
                   {stats.activeMentors}
                 </p>
               </div>

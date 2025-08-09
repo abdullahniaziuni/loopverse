@@ -146,11 +146,11 @@ interface MentorCardProps {
 
 const MentorCard: React.FC<MentorCardProps> = ({ mentor }) => {
   return (
-    <div className="glass-card rounded-2xl p-6 hover-lift hover-glow group transition-all duration-300">
+    <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
       <div className="flex items-start space-x-4">
         <div className="flex-shrink-0 relative">
           <img
-            className="h-16 w-16 rounded-2xl object-cover ring-4 ring-white/50 group-hover:ring-blue-500/50 transition-all duration-300"
+            className="h-16 w-16 rounded-lg object-cover"
             src={
               mentor.avatar ||
               `https://ui-avatars.com/api/?name=${encodeURIComponent(

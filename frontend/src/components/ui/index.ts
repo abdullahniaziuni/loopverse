@@ -3,4 +3,3 @@ export { Modal } from "./Modal";
 export { Toast, ToastContainer } from "./Toast";
 export { Loading, LoadingPage } from "./Loading";
 export { Input, Textarea, Select } from "./Input";
-export { AnimatedBackground } from "./AnimatedBackground";

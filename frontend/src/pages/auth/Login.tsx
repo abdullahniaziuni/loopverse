@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { Button, Input } from "../../components/ui";
-import { AnimatedBackground } from "../../components/ui/AnimatedBackground";
 import { useToast } from "../../hooks/useToast";
 import { isValidEmail } from "../../utils";
 
@@ -65,28 +64,26 @@ export const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
-      <AnimatedBackground />
-
+    <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gray-50">
       <div className="max-w-md w-full space-y-8 relative z-10">
-        <div className="glass-card rounded-3xl p-8 hover-lift">
+        <div className="bg-white rounded-xl p-8 shadow-lg border border-gray-100">
           <div className="text-center mb-8">
             <div className="flex justify-center mb-4">
-              <div className="w-16 h-16 bg-gradient-to-r from-blue-400 to-purple-500 rounded-2xl flex items-center justify-center animate-pulse-glow">
-                <span className="text-2xl font-bold text-white">S</span>
+              <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center">
+                <span className="text-xl font-bold text-white">S</span>
               </div>
             </div>
-            <span className="text-3xl font-bold gradient-text">
+            <span className="text-2xl font-bold text-gray-900">
               SkillSphere
             </span>
-            <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-800">
-              Welcome Back! ✨
+            <h2 className="mt-6 text-center text-2xl font-bold text-gray-900">
+              Welcome Back!
             </h2>
             <p className="mt-2 text-center text-sm text-gray-600">
               Or{" "}
               <Link
                 to="/signup"
-                className="font-semibold text-blue-600 hover:text-blue-500 transition-colors duration-300"
+                className="font-medium text-blue-600 hover:text-blue-500"
               >
                 create a new account
               </Link>
@@ -142,24 +139,20 @@ export const Login: React.FC = () => {
               </Button>
             </div>
 
-            {/* Enhanced Demo credentials */}
-            <div className="mt-6 p-6 glass rounded-2xl border border-blue-200/30">
-              <h3 className="text-sm font-semibold text-blue-800 mb-3 flex items-center">
-                <span className="mr-2">🚀</span>
+            {/* Demo credentials */}
+            <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <h3 className="text-sm font-medium text-blue-800 mb-2">
                 Demo Credentials:
               </h3>
-              <div className="text-xs text-blue-700 space-y-2">
-                <div className="flex items-center justify-between p-2 bg-white/50 rounded-lg">
-                  <strong>Learner:</strong>
-                  <span className="font-mono">learner@demo.com / password</span>
+              <div className="text-xs text-blue-700 space-y-1">
+                <div>
+                  <strong>Learner:</strong> learner@demo.com / password
                 </div>
-                <div className="flex items-center justify-between p-2 bg-white/50 rounded-lg">
-                  <strong>Mentor:</strong>
-                  <span className="font-mono">mentor@demo.com / password</span>
+                <div>
+                  <strong>Mentor:</strong> mentor@demo.com / password
                 </div>
-                <div className="flex items-center justify-between p-2 bg-white/50 rounded-lg">
-                  <strong>Admin:</strong>
-                  <span className="font-mono">admin@demo.com / password</span>
+                <div>
+                  <strong>Admin:</strong> admin@demo.com / password
                 </div>
               </div>
             </div>
