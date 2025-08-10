@@ -162,9 +162,11 @@ const mentorController = {
       // Transform mentor data for frontend
       const mentorData = {
         id: mentor._id,
-        name: `${mentor.firstName} ${mentor.lastName}`,
+        name: `${mentor.firstName}${
+          mentor.lastName ? " " + mentor.lastName : ""
+        }`.trim(),
         firstName: mentor.firstName,
-        lastName: mentor.lastName,
+        lastName: mentor.lastName || "",
         email: mentor.email,
         bio: mentor.biography,
         skills: mentor.skills.map((skill) => skill.name || skill),
@@ -880,9 +882,11 @@ const mentorController = {
 
       const transformedMentors = mentors.map((mentor) => ({
         id: mentor._id,
-        name: `${mentor.firstName} ${mentor.lastName}`,
+        name: `${mentor.firstName}${
+          mentor.lastName ? " " + mentor.lastName : ""
+        }`.trim(),
         firstName: mentor.firstName,
-        lastName: mentor.lastName,
+        lastName: mentor.lastName || "",
         email: mentor.email,
         bio: mentor.biography,
         skills: mentor.skills.map((skill) => skill.name || skill),

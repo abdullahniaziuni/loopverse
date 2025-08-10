@@ -1,7 +1,7 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const Mentor = require('../Models/mentor');
-const Session = require('../Models/session');
+const Mentor = require("../Models/mentor");
+const Session = require("../Models/session");
 
 /**
  * Search Routes
@@ -13,38 +13,38 @@ const Session = require('../Models/session');
  * @desc Search for mentors with advanced filtering
  * @access Public
  */
-router.get('/mentors', async (req, res) => {
+router.get("/mentors", async (req, res) => {
   try {
     const {
-      q,                  // text search query
-      expertise,          // specific expertise area
-      skills,             // specific skills
-      minRating,          // minimum rating
-      maxRating,          // maximum rating
-      availability,       // day of week (0-6)
-      minPrice,           // minimum hourly rate
-      maxPrice,           // maximum hourly rate
-      language,           // specific language
-      sort = 'rating',    // sort field
-      order = 'desc',     // asc or desc
+      q, // text search query
+      expertise, // specific expertise area
+      skills, // specific skills
+      minRating, // minimum rating
+      maxRating, // maximum rating
+      availability, // day of week (0-6)
+      minPrice, // minimum hourly rate
+      maxPrice, // maximum hourly rate
+      language, // specific language
+      sort = "rating", // sort field
+      order = "desc", // asc or desc
       page = 1,
-      limit = 10
+      limit = 10,
     } = req.query;
 
     // Build query
     const query = {
       isVerified: true,
-      isActive: true
+      isActive: true,
     };
 
     // Text search
     if (q) {
       query.$or = [
-        { firstName: { $regex: q, $options: 'i' } },
-        { lastName: { $regex: q, $options: 'i' } },
-        { biography: { $regex: q, $options: 'i' } },
-        { expertise: { $in: [new RegExp(q, 'i')] } },
-        { 'skills.name': { $in: [new RegExp(q, 'i')] } }
+        { firstName: { $regex: q, $options: "i" } },
+        { lastName: { $regex: q, $options: "i" } },
+        { biography: { $regex: q, $options: "i" } },
+        { expertise: { $in: [new RegExp(q, "i")] } },
+        { "skills.name": { $in: [new RegExp(q, "i")] } },
       ];
     }
 
@@ -57,18 +57,18 @@ router.get('/mentors', async (req, res) => {
     // Skills filter
     if (skills) {
       const skillsArray = Array.isArray(skills) ? skills : [skills];
-      query['skills.name'] = { $in: skillsArray };
+      query["skills.name"] = { $in: skillsArray };
     }
 
     // Rating filters
     if (minRating) {
-      query['ratings.averageRating'] = { $gte: parseFloat(minRating) };
+      query["ratings.averageRating"] = { $gte: parseFloat(minRating) };
     }
     if (maxRating) {
-      if (query['ratings.averageRating']) {
-        query['ratings.averageRating'].$lte = parseFloat(maxRating);
+      if (query["ratings.averageRating"]) {
+        query["ratings.averageRating"].$lte = parseFloat(maxRating);
       } else {
-        query['ratings.averageRating'] = { $lte: parseFloat(maxRating) };
+        query["ratings.averageRating"] = { $lte: parseFloat(maxRating) };
       }
     }
 
@@ -86,37 +86,39 @@ router.get('/mentors', async (req, res) => {
 
     // Language filter
     if (language) {
-      query['languages.language'] = language;
+      query["languages.language"] = language;
     }
 
     // Availability filter (simplified - check if mentor has any slots on that day)
     if (availability) {
-      query['availability.dayOfWeek'] = parseInt(availability);
+      query["availability.dayOfWeek"] = parseInt(availability);
     }
 
     // Build sort object
     let sortObj = {};
     switch (sort) {
-      case 'rating':
-        sortObj['ratings.averageRating'] = order === 'asc' ? 1 : -1;
+      case "rating":
+        sortObj["ratings.averageRating"] = order === "asc" ? 1 : -1;
         break;
-      case 'price':
-        sortObj.hourlyRate = order === 'asc' ? 1 : -1;
+      case "price":
+        sortObj.hourlyRate = order === "asc" ? 1 : -1;
         break;
-      case 'experience':
-        sortObj.yearsOfExperience = order === 'asc' ? 1 : -1;
+      case "experience":
+        sortObj.yearsOfExperience = order === "asc" ? 1 : -1;
         break;
-      case 'name':
-        sortObj.firstName = order === 'asc' ? 1 : -1;
+      case "name":
+        sortObj.firstName = order === "asc" ? 1 : -1;
         break;
       default:
-        sortObj['ratings.averageRating'] = -1;
+        sortObj["ratings.averageRating"] = -1;
     }
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
     const mentors = await Mentor.find(query)
-      .select('firstName lastName profilePicture biography expertise skills ratings hourlyRate timezone yearsOfExperience languages')
+      .select(
+        "firstName lastName profilePicture biography expertise skills ratings hourlyRate timezone yearsOfExperience languages"
+      )
       .sort(sortObj)
       .skip(skip)
       .limit(parseInt(limit));
@@ -124,11 +126,13 @@ router.get('/mentors', async (req, res) => {
     const total = await Mentor.countDocuments(query);
 
     // Transform mentors for frontend
-    const transformedMentors = mentors.map(mentor => ({
+    const transformedMentors = mentors.map((mentor) => ({
       id: mentor._id,
-      name: `${mentor.firstName} ${mentor.lastName}`,
+      name: `${mentor.firstName}${
+        mentor.lastName ? " " + mentor.lastName : ""
+      }`.trim(),
       firstName: mentor.firstName,
-      lastName: mentor.lastName,
+      lastName: mentor.lastName || "",
       profilePicture: mentor.profilePicture,
       biography: mentor.biography,
       expertise: mentor.expertise,
@@ -138,7 +142,7 @@ router.get('/mentors', async (req, res) => {
       hourlyRate: mentor.hourlyRate,
       timezone: mentor.timezone,
       yearsOfExperience: mentor.yearsOfExperience,
-      languages: mentor.languages
+      languages: mentor.languages,
     }));
 
     res.json({
@@ -150,16 +154,15 @@ router.get('/mentors', async (req, res) => {
         total,
         totalPages: Math.ceil(total / parseInt(limit)),
         hasNext: skip + parseInt(limit) < total,
-        hasPrev: parseInt(page) > 1
+        hasPrev: parseInt(page) > 1,
       },
-      message: 'Mentors search completed successfully'
+      message: "Mentors search completed successfully",
     });
-
   } catch (error) {
-    console.error('Error searching mentors:', error);
+    console.error("Error searching mentors:", error);
     res.status(500).json({
       success: false,
-      error: 'Server error while searching mentors'
+      error: "Server error while searching mentors",
     });
   }
 });
@@ -169,7 +172,7 @@ router.get('/mentors', async (req, res) => {
  * @desc Search for sessions
  * @access Private
  */
-router.get('/sessions', async (req, res) => {
+router.get("/sessions", async (req, res) => {
   try {
     const {
       q,
@@ -179,7 +182,7 @@ router.get('/sessions', async (req, res) => {
       startDate,
       endDate,
       page = 1,
-      limit = 10
+      limit = 10,
     } = req.query;
 
     // Build query
@@ -187,8 +190,8 @@ router.get('/sessions', async (req, res) => {
 
     if (q) {
       query.$or = [
-        { title: { $regex: q, $options: 'i' } },
-        { description: { $regex: q, $options: 'i' } }
+        { title: { $regex: q, $options: "i" } },
+        { description: { $regex: q, $options: "i" } },
       ];
     }
 
@@ -217,8 +220,8 @@ router.get('/sessions', async (req, res) => {
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
     const sessions = await Session.find(query)
-      .populate('mentorId', 'firstName lastName profilePicture')
-      .populate('learnerId', 'firstName lastName profilePicture')
+      .populate("mentorId", "firstName lastName profilePicture")
+      .populate("learnerId", "firstName lastName profilePicture")
       .sort({ startTime: -1 })
       .skip(skip)
       .limit(parseInt(limit));
@@ -226,25 +229,25 @@ router.get('/sessions', async (req, res) => {
     const total = await Session.countDocuments(query);
 
     // Transform sessions for frontend
-    const transformedSessions = sessions.map(session => ({
+    const transformedSessions = sessions.map((session) => ({
       id: session._id,
       title: session.title,
       description: session.description,
       mentor: {
         id: session.mentorId._id,
         name: `${session.mentorId.firstName} ${session.mentorId.lastName}`,
-        profilePicture: session.mentorId.profilePicture
+        profilePicture: session.mentorId.profilePicture,
       },
       learner: {
         id: session.learnerId._id,
         name: `${session.learnerId.firstName} ${session.learnerId.lastName}`,
-        profilePicture: session.learnerId.profilePicture
+        profilePicture: session.learnerId.profilePicture,
       },
       startTime: session.startTime,
       endTime: session.endTime,
       duration: session.duration,
       status: session.status,
-      price: session.price
+      price: session.price,
     }));
 
     res.json({
@@ -256,16 +259,15 @@ router.get('/sessions', async (req, res) => {
         total,
         totalPages: Math.ceil(total / parseInt(limit)),
         hasNext: skip + parseInt(limit) < total,
-        hasPrev: parseInt(page) > 1
+        hasPrev: parseInt(page) > 1,
       },
-      message: 'Sessions search completed successfully'
+      message: "Sessions search completed successfully",
     });
-
   } catch (error) {
-    console.error('Error searching sessions:', error);
+    console.error("Error searching sessions:", error);
     res.status(500).json({
       success: false,
-      error: 'Server error while searching sessions'
+      error: "Server error while searching sessions",
     });
   }
 });

@@ -133,7 +133,7 @@ router.post("/recommendations", auth, async (req, res) => {
       ${mentors
         .map(
           (m) => `
-      - ${m.firstName} ${m.lastName}
+      - ${m.firstName}${m.lastName ? " " + m.lastName : ""}
         Skills: ${m.skills.map((s) => s.name).join(", ")}
         Expertise: ${m.expertise.join(", ")}
         Rating: ${m.ratings.averageRating}/5
@@ -247,7 +247,7 @@ router.post("/mentor-match", auth, async (req, res) => {
     ${mentors
       .map(
         (m) => `
-    - ${m.firstName} ${m.lastName}
+    - ${m.firstName}${m.lastName ? " " + m.lastName : ""}
       Skills: ${m.skills.map((s) => s.name).join(", ")}
       Expertise: ${m.expertise.join(", ")}
       Rating: ${m.ratings.averageRating}/5

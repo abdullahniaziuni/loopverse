@@ -49,7 +49,8 @@ router.post(
  * @route GET /api/mentors
  * @desc Get all verified mentors (public listing)
  * @access Public
- */router.get("/", mentorController.getAllMentors);
+ */
+router.get("/", mentorController.getAllMentors);
 
 /**
  * @route GET /api/mentors/profile
@@ -312,12 +313,6 @@ router.post(
 router.put("/deactivate", auth, mentorController.deactivateAccount);
 
 // Public Routes
-/**
- * @route GET /api/mentors
- * @desc Get all verified mentors (with optional filtering)
- * @access Public
- */
-router.get("/", mentorController.getAllMentors);
 
 /**
  * @route GET /api/mentors/search

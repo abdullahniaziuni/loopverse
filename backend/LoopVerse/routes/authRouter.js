@@ -95,9 +95,11 @@ router.post(
       // Transform user data for frontend
       const userData = {
         id: user._id,
-        name: `${user.firstName} ${user.lastName}`,
+        name: `${user.firstName}${
+          user.lastName ? " " + user.lastName : ""
+        }`.trim(),
         firstName: user.firstName,
-        lastName: user.lastName,
+        lastName: user.lastName || "",
         email: user.email,
         role: userType, // Always use the normalized userType instead of user.role
         profilePicture: user.profilePicture,
@@ -156,7 +158,7 @@ router.post(
 
       const {
         firstName,
-        // lastName,
+        lastName,
         email,
         password,
         role,
@@ -179,7 +181,7 @@ router.post(
       let user;
       const userData = {
         firstName,
-        // lastName,
+        lastName: lastName || "",
         email,
         password,
         interests: interests || [],
@@ -254,14 +256,14 @@ router.post(
 router.get("/me", auth, async (req, res) => {
   try {
     let user;
-    
+
     // Log what we received from auth middleware
     console.log("User from auth middleware:", req.user);
 
     // Find user based on their role/userType
     // Use either userType or role property, whichever is available
     const userType = req.user.userType || req.user.role;
-    
+
     if (userType === "learner") {
       user = await Learner.findById(req.user.id).select("-password");
     } else if (userType === "mentor") {
@@ -280,9 +282,9 @@ router.get("/me", auth, async (req, res) => {
     // Transform user data for frontend
     const userData = {
       id: user._id,
-      name: `${user.firstName} ${user.lastName || ''}`,
+      name: `${user.firstName} ${user.lastName || ""}`,
       firstName: user.firstName,
-      lastName: user.lastName || '',
+      lastName: user.lastName || "",
       email: user.email,
       role: userType,
       profilePicture: user.profilePicture,

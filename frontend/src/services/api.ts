@@ -22,6 +22,7 @@ class ApiService {
   constructor(baseURL: string = API_BASE_URL) {
     this.baseURL = baseURL;
     this.token = localStorage.getItem("auth_token");
+    console.log("🔧 ApiService initialized with baseURL:", this.baseURL);
   }
 
   // Helper method to set authorization header
@@ -76,8 +77,10 @@ class ApiService {
 
       if (!response.ok) {
         console.error("❌ ApiService.request - Response not ok");
+        console.error("❌ Response status:", response.status);
+        console.error("❌ Response data:", data);
         throw new Error(
-          data.message || `HTTP error! status: ${response.status}`
+          data.error || data.message || `HTTP error! status: ${response.status}`
         );
       }
 
