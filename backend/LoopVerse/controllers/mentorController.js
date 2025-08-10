@@ -47,7 +47,7 @@ const mentorController = {
         skills: skills || [],
         expertise: expertise || [],
         timezone: timezone || "UTC",
-        isVerified: false, // New mentors start unverified
+        isVerified: true, // New mentors start unverified
       });
 
       // Save mentor
