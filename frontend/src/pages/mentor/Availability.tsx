@@ -1,9 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Calendar, Clock, Plus, Trash2, Edit } from "lucide-react";
 import { Layout } from "../../components/layout";
 import { Button, Input, Modal } from "../../components/ui";
 import { useToast } from "../../hooks/useToast";
 import { formatDate, formatTime } from "../../utils";
+import { getMentorAvailability, updateMentorAvailability, addAvailabilityDate } from '../../services/api/mentorService';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface AvailabilitySlotLocal {
   id: string;
@@ -28,6 +30,61 @@ export const Availability: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { success: showSuccess, error: showError } = useToast();
+  const { user } = useAuth();
+
+  useEffect(() => {
+    // Check if token exists on component mount
+    const token = localStorage.getItem('auth_token');
+    console.log("Auth token exists:", !!token);
+    if (!token) {
+      showError("You need to be logged in to manage availability");
+      return;
+    }
+
+    // Fetch mentor availability data
+    const fetchAvailability = async () => {
+      try {
+        const mentorId = user?.id;
+        if (!mentorId) {
+          console.error("Cannot fetch availability: User ID not available");
+          return;
+        }
+
+        const response = await getMentorAvailability(mentorId);
+        
+        if (response.success && response.data) {
+          // Transform API data to match local format
+          const availabilitySlots: AvailabilitySlotLocal[] = [];
+          
+          response.data.availabilityDates?.forEach(dateObj => {
+            const dateString = new Date(dateObj.date).toISOString().split('T')[0];
+            
+            dateObj.timeSlots.forEach(slot => {
+              availabilitySlots.push({
+                id: slot._id || `${dateObj._id}-${slot.startTime}`,
+                date: dateString,
+                startTime: slot.startTime,
+                endTime: slot.endTime,
+                isBooked: slot.isBooked || false
+              });
+            });
+          });
+          
+          setSlots(availabilitySlots);
+          showSuccess("Availability loaded successfully");
+        } else {
+          console.error("Failed to fetch availability:", response);
+        }
+      } catch (error) {
+        console.error("Error fetching availability:", error);
+        showError("Failed to load availability data");
+      }
+    };
+
+    if (user?.id) {
+      fetchAvailability();
+    }
+  }, [user]); // Add user as dependency to re-fetch if user changes
 
   const handleAddSlot = () => {
     setFormData({ date: "", startTime: "", endTime: "" });
@@ -60,6 +117,17 @@ export const Availability: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Changed from 'token' to 'auth_token'
+    const token = localStorage.getItem('auth_token');
+    if (!token || token === 'undefined' || token === 'null' || token.trim() === '') {
+      showError("You need to be logged in. Redirecting to login page...");
+      setTimeout(() => {
+        // Redirect to login
+        window.location.href = '/login';
+      }, 2000);
+      return;
+    }
 
     if (!formData.date || !formData.startTime || !formData.endTime) {
       showError("Please fill in all fields.");
@@ -73,45 +141,58 @@ export const Availability: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      // Push availability to backend in mentor weekly format
-      const payload = slots
-        .filter((s) => !s.isBooked)
-        .map((s) => ({
-          dayOfWeek: new Date(s.date).getDay(),
-          startTime: s.startTime,
-          endTime: s.endTime,
-        }));
+      const mentorId = user?.id;
+      
+      if (!mentorId) {
+        showError("User information is missing. Please log in again.");
+        return;
+      }
 
-      // Optimistically update local state
-      let newSlots = slots;
       if (editingSlot) {
-        newSlots = slots.map((slot) =>
-          slot.id === editingSlot.id ? { ...slot, ...formData } : slot
+        // Update existing slot
+        // Optimistically update UI
+        setSlots((prev) => 
+          prev.map((slot) => 
+            slot.id === editingSlot.id ? { ...slot, ...formData } : slot
+          )
         );
       } else {
+        // Add a new slot
         const newSlot: AvailabilitySlotLocal = {
           id: Date.now().toString(),
           ...formData,
           isBooked: false,
         };
-        newSlots = [...slots, newSlot];
-      }
-      setSlots(newSlots);
-
-      const res = await apiService.updateMentorAvailability(payload);
-      if (res.success) {
-        showSuccess("Availability saved successfully.");
-      } else {
-        showError(res.error || "Failed to save availability");
-        // Revert optimistic update
-        setSlots(slots);
+        
+        // Optimistically update UI
+        setSlots((prev) => [...prev, newSlot]);
+        
+        // Format timeSlots for API
+        const timeSlots = [{
+          startTime: formData.startTime,
+          endTime: formData.endTime,
+          isBooked: false
+        }];
+        
+        // Send to API
+        const response = await addAvailabilityDate(mentorId, formData.date, timeSlots);
+        
+        if (!response.success) {
+          // Revert optimistic update on failure
+          setSlots((prev) => prev.filter(s => s.id !== newSlot.id));
+          showError(response.message || "Failed to save availability");
+        } else {
+          showSuccess("Availability saved successfully");
+        }
       }
 
       setIsAddModalOpen(false);
       setFormData({ date: "", startTime: "", endTime: "" });
       setEditingSlot(null);
+      
     } catch (error) {
-      showError("Failed to save availability slot. Please try again.");
+      console.error("Error saving availability:", error);
+      showError("Failed to save availability. Please try again.");
     } finally {
       setIsSubmitting(false);
     }

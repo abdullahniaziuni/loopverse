@@ -254,13 +254,19 @@ router.post(
 router.get("/me", auth, async (req, res) => {
   try {
     let user;
+    
+    // Log what we received from auth middleware
+    console.log("User from auth middleware:", req.user);
 
-    // Find user based on their type
-    if (req.user.userType === "learner") {
+    // Find user based on their role/userType
+    // Use either userType or role property, whichever is available
+    const userType = req.user.userType || req.user.role;
+    
+    if (userType === "learner") {
       user = await Learner.findById(req.user.id).select("-password");
-    } else if (req.user.userType === "mentor") {
+    } else if (userType === "mentor") {
       user = await Mentor.findById(req.user.id).select("-password");
-    } else if (req.user.userType === "admin") {
+    } else if (userType === "admin") {
       user = await Admin.findById(req.user.id).select("-password");
     }
 
@@ -274,11 +280,11 @@ router.get("/me", auth, async (req, res) => {
     // Transform user data for frontend
     const userData = {
       id: user._id,
-      name: `${user.firstName} ${user.lastName}`,
+      name: `${user.firstName} ${user.lastName || ''}`,
       firstName: user.firstName,
-      // lastName: user.lastName,
+      lastName: user.lastName || '',
       email: user.email,
-      role: req.user.userType, // Always use the normalized userType from JWT
+      role: userType,
       profilePicture: user.profilePicture,
       timezone: user.timezone,
       isVerified: user.isVerified || false,

@@ -27,16 +27,27 @@ module.exports = function (req, res, next) {
     });
   }
 
+  // Add some debugging to see what's happening
+  console.log("Auth middleware received token:", token ? "Token exists" : "No token");
+
   try {
     // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    // Set user info in request
-    req.user = decoded;
-
+    
+    // Debug the token content
+    console.log("Token payload:", JSON.stringify(decoded));
+    
+    // Set user info directly from decoded token
+    // The properties are at the root level, not nested under 'user'
+    req.user = {
+      id: decoded.id,
+      role: decoded.role || decoded.userType,
+      userType: decoded.userType || decoded.role
+    };
+    
     next();
   } catch (err) {
-    console.error("Authentication error:", err.message);
+    console.error("Token verification failed:", err.message);
     res.status(401).json({
       success: false,
       error: "Token is not valid",

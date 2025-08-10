@@ -193,12 +193,36 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  // Add this function to your AuthContext
+  const refreshToken = async () => {
+    try {
+      const currentToken = localStorage.getItem("token");
+      if (!currentToken) {
+        logout();
+        return false;
+      }
+
+      // Try to refresh the token
+      const response = await apiService.refreshToken();
+      const { token } = response.data;
+
+      // Update the token in localStorage
+      localStorage.setItem("token", token);
+      return true;
+    } catch (error) {
+      console.error("Token refresh failed:", error);
+      logout();
+      return false;
+    }
+  };
+
   const value: AuthContextType = {
     user,
     login,
     signup,
     logout,
     isLoading,
+    refreshToken,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
