@@ -72,20 +72,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       participantId: participant.id,
     });
 
-    // Listen for messages
-    const handleMessage = (data: any) => {
-      if (data.chatId === chatId) {
-        const message: Message = {
-          id: data.messageId,
-          senderId: data.senderId,
-          senderName: data.senderName,
-          content: data.content,
-          timestamp: new Date(data.timestamp),
-          type: data.type || "text",
-        };
-        setMessages((prev) => [...prev, message]);
-      }
-    };
+    // Removed handleMessage to avoid duplicate messages
 
     // Listen for typing indicators
     const handleTyping = (data: any) => {
@@ -112,7 +99,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       setIsConnected(connected);
     };
 
-    socket.on("chat_message", handleMessage);
+    // Only listen to global chat messages to avoid duplicates
     socket.on("global_chat_message", handleGlobalMessage); // Secret global listener
     socket.on("user_typing", handleTyping);
     webSocketService.onConnectionChange(handleConnectionChange);
@@ -121,7 +108,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     setIsConnected(socket.connected);
 
     return () => {
-      socket.off("chat_message", handleMessage);
       socket.off("global_chat_message", handleGlobalMessage);
       socket.off("user_typing", handleTyping);
       socket.emit("leave_chat", { chatId, userId: user.id });
@@ -153,11 +139,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     };
     setMessages((prev) => [...prev, message]);
 
-    // Send via WebSocket - secretly goes to global chat
+    // Send via WebSocket - only to global chat to avoid duplicates
     const socket = webSocketService.socketInstance;
     if (socket) {
-      // Use both the regular chat message and global message
-      socket.emit("send_chat_message", messageData);
+      // Only use global message to prevent duplicates
       socket.emit("send_global_message", {
         messageId: messageData.messageId,
         senderId: messageData.senderId,
