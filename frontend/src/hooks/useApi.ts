@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
-import { apiService } from '../services/api';
-import { ApiResponse } from '../types';
+import { useState, useEffect, useCallback } from "react";
+import { apiService } from "../services/api";
+import { ApiResponse } from "../types";
 
 // Generic API hook for any API call
 export function useApi<T>(
@@ -15,16 +15,18 @@ export function useApi<T>(
   const execute = useCallback(async () => {
     setIsLoading(true);
     setError(null);
-    
+
     try {
       const response = await apiCall();
       if (response.success && response.data) {
         setData(response.data);
       } else {
-        setError(response.error || 'An error occurred');
+        setError(response.error || "An error occurred");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An unexpected error occurred');
+      setError(
+        err instanceof Error ? err.message : "An unexpected error occurred"
+      );
     } finally {
       setIsLoading(false);
     }
@@ -58,11 +60,7 @@ export function useMentors(filters?: any) {
 }
 
 export function useMentor(id: string) {
-  return useApi(
-    () => apiService.getMentorById(id),
-    [id],
-    !!id
-  );
+  return useApi(() => apiService.getMentorById(id), [id], !!id);
 }
 
 export function useSessions(filters?: any) {
@@ -73,11 +71,7 @@ export function useSessions(filters?: any) {
 }
 
 export function useSession(id: string) {
-  return useApi(
-    () => apiService.getSessionById(id),
-    [id],
-    !!id
-  );
+  return useApi(() => apiService.getSessionById(id), [id], !!id);
 }
 
 export function useBookingRequests(filters?: any) {
@@ -88,10 +82,7 @@ export function useBookingRequests(filters?: any) {
 }
 
 export function useDashboardStats() {
-  return useApi(
-    () => apiService.getDashboardStats(),
-    []
-  );
+  return useApi(() => apiService.getDashboardStats(), []);
 }
 
 export function useMentorAvailability(mentorId: string, date?: string) {
@@ -110,28 +101,32 @@ export function useApiMutation<TData, TVariables = void>(
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const mutate = useCallback(async (variables: TVariables) => {
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      const response = await mutationFn(variables);
-      if (response.success && response.data) {
-        setData(response.data);
-        return response.data;
-      } else {
-        const errorMessage = response.error || 'An error occurred';
+  const mutate = useCallback(
+    async (variables: TVariables) => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const response = await mutationFn(variables);
+        if (response.success && response.data) {
+          setData(response.data);
+          return response.data;
+        } else {
+          const errorMessage = response.error || "An error occurred";
+          setError(errorMessage);
+          throw new Error(errorMessage);
+        }
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : "An unexpected error occurred";
         setError(errorMessage);
-        throw new Error(errorMessage);
+        throw err;
+      } finally {
+        setIsLoading(false);
       }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred';
-      setError(errorMessage);
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [mutationFn]);
+    },
+    [mutationFn]
+  );
 
   const reset = useCallback(() => {
     setData(null);
@@ -150,64 +145,85 @@ export function useApiMutation<TData, TVariables = void>(
 
 // Specific mutation hooks
 export function useCreateBooking() {
-  return useApiMutation((bookingData: any) => 
+  return useApiMutation((bookingData: any) =>
     apiService.createBookingRequest(bookingData)
   );
 }
 
 export function useRespondToBooking() {
-  return useApiMutation(({ id, response, message }: { 
-    id: string; 
-    response: 'accepted' | 'rejected'; 
-    message?: string 
-  }) => 
-    apiService.respondToBookingRequest(id, response, message)
+  return useApiMutation(
+    ({
+      id,
+      response,
+      message,
+    }: {
+      id: string;
+      response: "accepted" | "rejected";
+      message?: string;
+    }) => apiService.respondToBookingRequest(id, response, message)
   );
 }
 
 export function useSubmitFeedback() {
-  return useApiMutation(({ sessionId, feedback }: { 
-    sessionId: string; 
-    feedback: { rating: number; comment?: string } 
-  }) => 
-    apiService.submitFeedback(sessionId, feedback)
+  return useApiMutation(
+    ({
+      sessionId,
+      feedback,
+    }: {
+      sessionId: string;
+      feedback: { rating: number; comment?: string };
+    }) => apiService.submitFeedback(sessionId, feedback)
   );
 }
 
 export function useUpdateProfile() {
-  return useApiMutation((profileData: any) => 
+  return useApiMutation((profileData: any) =>
     apiService.updateProfile(profileData)
   );
 }
 
 export function useCreateSession() {
-  return useApiMutation((sessionData: any) => 
+  return useApiMutation((sessionData: any) =>
     apiService.createSession(sessionData)
   );
 }
 
 export function useCancelSession() {
-  return useApiMutation(({ id, reason }: { id: string; reason?: string }) => 
+  return useApiMutation(({ id, reason }: { id: string; reason?: string }) =>
     apiService.cancelSession(id, reason)
   );
 }
 
 export function useApproveMentor() {
-  return useApiMutation(({ applicationId, approved, comments }: { 
-    applicationId: string; 
-    approved: boolean; 
-    comments?: string 
-  }) => 
-    apiService.approveMentorApplication(applicationId, approved, comments)
+  return useApiMutation(
+    ({
+      applicationId,
+      approved,
+      comments,
+    }: {
+      applicationId: string;
+      approved: boolean;
+      comments?: string;
+    }) => apiService.approveMentorApplication(applicationId, approved, comments)
   );
 }
 
 export function useUploadFile() {
-  return useApiMutation(({ file, type }: { 
-    file: File; 
-    type: 'avatar' | 'resource' | 'portfolio' 
-  }) => 
-    apiService.uploadFile(file, type)
+  return useApiMutation(
+    ({
+      file,
+      type,
+    }: {
+      file: File;
+      type: "avatar" | "resource" | "portfolio" | "session";
+    }) => apiService.uploadFile(file, type)
+  );
+}
+
+export function useUploadSessionFile() {
+  return useApiMutation(
+    ({ file, sessionId }: { file: File; sessionId?: string }) =>
+      apiService.uploadSessionFile(file, sessionId)
   );
 }
 
@@ -218,9 +234,12 @@ export function useOptimisticUpdate<T>(
 ) {
   const [optimisticData, setOptimisticData] = useState<T[]>(initialData);
 
-  const addOptimistic = useCallback((newItem: T) => {
-    setOptimisticData(current => updateFn(current, newItem));
-  }, [updateFn]);
+  const addOptimistic = useCallback(
+    (newItem: T) => {
+      setOptimisticData((current) => updateFn(current, newItem));
+    },
+    [updateFn]
+  );
 
   const revert = useCallback(() => {
     setOptimisticData(initialData);
@@ -240,7 +259,9 @@ export function useOptimisticUpdate<T>(
 
 // Infinite scroll hook
 export function useInfiniteScroll<T>(
-  fetchFn: (page: number) => Promise<ApiResponse<{ items: T[]; hasMore: boolean }>>,
+  fetchFn: (
+    page: number
+  ) => Promise<ApiResponse<{ items: T[]; hasMore: boolean }>>,
   dependencies: any[] = []
 ) {
   const [data, setData] = useState<T[]>([]);
@@ -254,17 +275,17 @@ export function useInfiniteScroll<T>(
     setIsLoading(true);
     setError(null);
     setPage(1);
-    
+
     try {
       const response = await fetchFn(1);
       if (response.success && response.data) {
         setData(response.data.items);
         setHasMore(response.data.hasMore);
       } else {
-        setError(response.error || 'Failed to load data');
+        setError(response.error || "Failed to load data");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setIsLoading(false);
     }
@@ -272,21 +293,21 @@ export function useInfiniteScroll<T>(
 
   const loadMore = useCallback(async () => {
     if (!hasMore || isLoadingMore) return;
-    
+
     setIsLoadingMore(true);
     const nextPage = page + 1;
-    
+
     try {
       const response = await fetchFn(nextPage);
       if (response.success && response.data) {
-        setData(current => [...current, ...response.data!.items]);
+        setData((current) => [...current, ...response.data!.items]);
         setHasMore(response.data.hasMore);
         setPage(nextPage);
       } else {
-        setError(response.error || 'Failed to load more data');
+        setError(response.error || "Failed to load more data");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setIsLoadingMore(false);
     }
@@ -319,7 +340,7 @@ export function useRealTimeData<T>(
   useEffect(() => {
     // This would be implemented when WebSocket is added
     // For now, it's a placeholder for future real-time functionality
-    
+
     return () => {
       // Cleanup WebSocket connection
     };
@@ -338,7 +359,7 @@ export function useDebouncedSearch<T>(
   searchFn: (query: string) => Promise<ApiResponse<T[]>>,
   delay: number = 300
 ) {
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState("");
   const [results, setResults] = useState<T[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -352,17 +373,17 @@ export function useDebouncedSearch<T>(
     const timeoutId = setTimeout(async () => {
       setIsLoading(true);
       setError(null);
-      
+
       try {
         const response = await searchFn(query);
         if (response.success && response.data) {
           setResults(response.data);
         } else {
-          setError(response.error || 'Search failed');
+          setError(response.error || "Search failed");
           setResults([]);
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Search failed');
+        setError(err instanceof Error ? err.message : "Search failed");
         setResults([]);
       } finally {
         setIsLoading(false);

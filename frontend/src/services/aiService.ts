@@ -3,15 +3,17 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 
 if (!API_KEY) {
-  throw new Error(
-    "Gemini API key is not configured. Please add VITE_GEMINI_API_KEY to your .env file."
+  console.warn(
+    "Gemini API key is not configured. AI features will use fallback responses. Please add VITE_GEMINI_API_KEY to your .env file."
   );
 }
 
-const genAI = new GoogleGenerativeAI(API_KEY);
+const genAI = API_KEY ? new GoogleGenerativeAI(API_KEY) : null;
 
 // Get the generative model
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+const model = genAI
+  ? genAI.getGenerativeModel({ model: "gemini-1.5-flash" })
+  : null;
 
 export interface AIResponse {
   success: boolean;
@@ -469,6 +471,50 @@ class AIService {
     mentorInsights: string[];
     recommendedFollowUp: string[];
   } | null> {
+    // Fallback if no API key
+    if (!model) {
+      return {
+        sessionSummary: `This was a productive ${
+          sessionData.duration
+        } minute session on ${
+          sessionData.topic
+        }. The session involved ${sessionData.participants
+          .map((p) => `${p.name} (${p.role})`)
+          .join(
+            " and "
+          )} and covered important learning objectives through interactive discussion and practical examples.`,
+        learningObjectives: [
+          "Understand key concepts related to " + sessionData.topic,
+          "Apply practical knowledge through hands-on examples",
+          "Develop problem-solving skills",
+          "Build confidence in the subject area",
+        ],
+        keyTakeaways: [
+          "Gained deeper understanding of core concepts",
+          "Learned practical application techniques",
+          "Identified areas for further improvement",
+          "Received valuable feedback and guidance",
+        ],
+        nextSteps: [
+          "Review session materials and notes",
+          "Practice the concepts discussed",
+          "Complete any assigned exercises",
+          "Prepare questions for next session",
+        ],
+        mentorInsights: [
+          "Student showed good engagement and understanding",
+          "Recommended focusing on practical applications",
+          "Suggested additional resources for deeper learning",
+          "Encouraged continued practice and exploration",
+        ],
+        recommendedFollowUp: [
+          "Schedule follow-up session to review progress",
+          "Explore advanced topics in the subject area",
+          "Work on real-world projects to apply knowledge",
+          "Connect with other learners in similar areas",
+        ],
+      };
+    }
     const chatSummary = sessionData.chatMessages
       .map((msg) => `${msg.sender}: ${msg.content}`)
       .join("\n");

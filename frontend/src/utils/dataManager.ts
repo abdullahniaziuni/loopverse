@@ -10,7 +10,7 @@ import {
 } from '../types';
 
 // Data transformation utilities
-export class DataManager {
+ class DataManager {
   // Transform API data to frontend format
   static transformUser(apiUser: any): User {
     return {

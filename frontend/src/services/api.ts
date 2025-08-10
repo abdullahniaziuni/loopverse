@@ -495,11 +495,39 @@ class ApiService {
   // File upload endpoints
   async uploadFile(
     file: File,
-    type: "avatar" | "resource" | "portfolio"
+    type: "avatar" | "resource" | "portfolio" | "session"
   ): Promise<ApiResponse<{ url: string }>> {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("type", type);
+
+    return this.request("/upload", {
+      method: "POST",
+      body: formData,
+      headers: {
+        Authorization: `Bearer ${this.token}`,
+      },
+    });
+  }
+
+  // Session file upload
+  async uploadSessionFile(
+    file: File,
+    sessionId?: string
+  ): Promise<
+    ApiResponse<{
+      url: string;
+      filename: string;
+      originalName: string;
+      size: number;
+    }>
+  > {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("type", "session");
+    if (sessionId) {
+      formData.append("sessionId", sessionId);
+    }
 
     return this.request("/upload", {
       method: "POST",

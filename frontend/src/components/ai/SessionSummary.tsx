@@ -1,8 +1,18 @@
-import React, { useState, useEffect } from 'react';
-import { FileText, Download, Share, Clock, Users, Target, CheckCircle } from 'lucide-react';
-import { Button } from '../ui';
-import { apiService } from '../../services/api';
-import { useToast } from '../../hooks/useToast';
+import React, { useState, useEffect } from "react";
+import {
+  FileText,
+  Download,
+  Share,
+  Clock,
+  Users,
+  Target,
+  CheckCircle,
+  X,
+  Sparkles,
+} from "lucide-react";
+import { Button } from "../ui";
+import { useToast } from "../../hooks/useToast";
+import { aiService } from "../../services/aiService";
 
 interface SessionSummaryProps {
   sessionId: string;
@@ -12,6 +22,7 @@ interface SessionSummaryProps {
     participants: Array<{ name: string; role: string }>;
     topic?: string;
   };
+  chatMessages?: Array<{ sender: string; content: string; timestamp: Date }>;
   onClose?: () => void;
 }
 
@@ -30,6 +41,7 @@ interface SummaryData {
 export const SessionSummary: React.FC<SessionSummaryProps> = ({
   sessionId,
   sessionData,
+  chatMessages = [],
   onClose,
 }) => {
   const [summary, setSummary] = useState<SummaryData | null>(null);
@@ -37,43 +49,54 @@ export const SessionSummary: React.FC<SessionSummaryProps> = ({
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const { success: showSuccess, error: showError } = useToast();
+  const { showSuccess, showError } = useToast();
 
-  // Fetch existing summary
+  // Auto-generate summary when component loads
   useEffect(() => {
-    const fetchSummary = async () => {
-      try {
-        setIsLoading(true);
-        const response = await apiService.getSessionSummary(sessionId);
-        if (response.success && response.data) {
-          setSummary(response.data);
-        }
-      } catch (err) {
-        console.error('Error fetching session summary:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchSummary();
-  }, [sessionId]);
+    if (sessionData && chatMessages.length > 0) {
+      generateSummary();
+    }
+  }, [sessionId, sessionData, chatMessages]);
 
   // Generate new summary
   const generateSummary = async () => {
+    if (!sessionData) return;
+
     try {
       setIsGenerating(true);
       setError(null);
 
-      const response = await apiService.generateSessionSummary(sessionId);
-      if (response.success && response.data) {
-        setSummary(response.data);
-        showSuccess('Session summary generated successfully!');
+      const aiResponse = await aiService.generateSessionNotes({
+        topic: sessionData.topic || sessionData.title,
+        duration: sessionData.duration,
+        participants: sessionData.participants,
+        chatMessages: chatMessages,
+        keyDiscussions: [],
+        learnerQuestions: [],
+      });
+
+      if (aiResponse) {
+        const summaryData: SummaryData = {
+          id: `summary_${sessionId}_${Date.now()}`,
+          sessionId,
+          summary: aiResponse.sessionSummary,
+          keyPoints: aiResponse.keyTakeaways,
+          actionItems: aiResponse.nextSteps,
+          nextSteps: aiResponse.recommendedFollowUp,
+          skillsCovered: aiResponse.learningObjectives,
+          duration: sessionData.duration,
+          createdAt: new Date().toISOString(),
+        };
+
+        setSummary(summaryData);
+        showSuccess("Session summary generated successfully!");
       } else {
-        setError(response.error || 'Failed to generate summary');
-        showError('Failed to generate session summary');
+        setError("Failed to generate summary");
+        showError("Failed to generate session summary");
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to generate summary';
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to generate summary";
       setError(errorMessage);
       showError(errorMessage);
     } finally {
@@ -91,7 +114,7 @@ export const SessionSummary: React.FC<SessionSummaryProps> = ({
 SESSION SUMMARY
 ===============
 
-Session: ${sessionData?.title || 'Learning Session'}
+Session: ${sessionData?.title || "Learning Session"}
 Duration: ${sessionData?.duration || 0} minutes
 Date: ${new Date(summary.createdAt).toLocaleDateString()}
 
@@ -101,24 +124,24 @@ ${summary.summary}
 
 KEY POINTS
 ----------
-${summary.keyPoints.map(point => `• ${point}`).join('\n')}
+${summary.keyPoints.map((point) => `• ${point}`).join("\n")}
 
 ACTION ITEMS
 ------------
-${summary.actionItems.map(item => `• ${item}`).join('\n')}
+${summary.actionItems.map((item) => `• ${item}`).join("\n")}
 
 NEXT STEPS
 ----------
-${summary.nextSteps.map(step => `• ${step}`).join('\n')}
+${summary.nextSteps.map((step) => `• ${step}`).join("\n")}
 
 SKILLS COVERED
 --------------
-${summary.skillsCovered.map(skill => `• ${skill}`).join('\n')}
+${summary.skillsCovered.map((skill) => `• ${skill}`).join("\n")}
       `;
 
-      const blob = new Blob([content], { type: 'text/plain' });
+      const blob = new Blob([content], { type: "text/plain" });
       const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = url;
       a.download = `session-summary-${sessionId}.txt`;
       document.body.appendChild(a);
@@ -126,9 +149,9 @@ ${summary.skillsCovered.map(skill => `• ${skill}`).join('\n')}
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
-      showSuccess('Summary downloaded successfully!');
+      showSuccess("Summary downloaded successfully!");
     } catch (err) {
-      showError('Failed to download summary');
+      showError("Failed to download summary");
     }
   };
 
@@ -139,17 +162,19 @@ ${summary.skillsCovered.map(skill => `• ${skill}`).join('\n')}
     try {
       if (navigator.share) {
         await navigator.share({
-          title: `Session Summary - ${sessionData?.title || 'Learning Session'}`,
+          title: `Session Summary - ${
+            sessionData?.title || "Learning Session"
+          }`,
           text: summary.summary,
           url: window.location.href,
         });
       } else {
         // Fallback: copy to clipboard
         await navigator.clipboard.writeText(summary.summary);
-        showSuccess('Summary copied to clipboard!');
+        showSuccess("Summary copied to clipboard!");
       }
     } catch (err) {
-      showError('Failed to share summary');
+      showError("Failed to share summary");
     }
   };
 
@@ -220,7 +245,8 @@ ${summary.skillsCovered.map(skill => `• ${skill}`).join('\n')}
               No Summary Available
             </h4>
             <p className="text-gray-600 mb-4">
-              Generate an AI-powered summary of this session to capture key insights and action items.
+              Generate an AI-powered summary of this session to capture key
+              insights and action items.
             </p>
             <Button
               onClick={generateSummary}
@@ -260,31 +286,41 @@ ${summary.skillsCovered.map(skill => `• ${skill}`).join('\n')}
                 <div className="flex items-center">
                   <Clock className="h-4 w-4 text-gray-500 mr-2" />
                   <span className="text-gray-600">Duration:</span>
-                  <span className="ml-1 font-medium">{sessionData?.duration || 0} min</span>
+                  <span className="ml-1 font-medium">
+                    {sessionData?.duration || 0} min
+                  </span>
                 </div>
                 <div className="flex items-center">
                   <Users className="h-4 w-4 text-gray-500 mr-2" />
                   <span className="text-gray-600">Participants:</span>
-                  <span className="ml-1 font-medium">{sessionData?.participants?.length || 2}</span>
+                  <span className="ml-1 font-medium">
+                    {sessionData?.participants?.length || 2}
+                  </span>
                 </div>
                 <div className="flex items-center">
                   <Target className="h-4 w-4 text-gray-500 mr-2" />
                   <span className="text-gray-600">Topic:</span>
-                  <span className="ml-1 font-medium">{sessionData?.topic || 'General'}</span>
+                  <span className="ml-1 font-medium">
+                    {sessionData?.topic || "General"}
+                  </span>
                 </div>
               </div>
             </div>
 
             {/* Summary */}
             <div>
-              <h4 className="text-md font-semibold text-gray-900 mb-3">Overview</h4>
+              <h4 className="text-md font-semibold text-gray-900 mb-3">
+                Overview
+              </h4>
               <p className="text-gray-700 leading-relaxed">{summary.summary}</p>
             </div>
 
             {/* Key Points */}
             {summary.keyPoints.length > 0 && (
               <div>
-                <h4 className="text-md font-semibold text-gray-900 mb-3">Key Points</h4>
+                <h4 className="text-md font-semibold text-gray-900 mb-3">
+                  Key Points
+                </h4>
                 <ul className="space-y-2">
                   {summary.keyPoints.map((point, index) => (
                     <li key={index} className="flex items-start">
@@ -299,7 +335,9 @@ ${summary.skillsCovered.map(skill => `• ${skill}`).join('\n')}
             {/* Action Items */}
             {summary.actionItems.length > 0 && (
               <div>
-                <h4 className="text-md font-semibold text-gray-900 mb-3">Action Items</h4>
+                <h4 className="text-md font-semibold text-gray-900 mb-3">
+                  Action Items
+                </h4>
                 <ul className="space-y-2">
                   {summary.actionItems.map((item, index) => (
                     <li key={index} className="flex items-start">
@@ -314,7 +352,9 @@ ${summary.skillsCovered.map(skill => `• ${skill}`).join('\n')}
             {/* Next Steps */}
             {summary.nextSteps.length > 0 && (
               <div>
-                <h4 className="text-md font-semibold text-gray-900 mb-3">Recommended Next Steps</h4>
+                <h4 className="text-md font-semibold text-gray-900 mb-3">
+                  Recommended Next Steps
+                </h4>
                 <ul className="space-y-2">
                   {summary.nextSteps.map((step, index) => (
                     <li key={index} className="flex items-start">
@@ -329,7 +369,9 @@ ${summary.skillsCovered.map(skill => `• ${skill}`).join('\n')}
             {/* Skills Covered */}
             {summary.skillsCovered.length > 0 && (
               <div>
-                <h4 className="text-md font-semibold text-gray-900 mb-3">Skills Covered</h4>
+                <h4 className="text-md font-semibold text-gray-900 mb-3">
+                  Skills Covered
+                </h4>
                 <div className="flex flex-wrap gap-2">
                   {summary.skillsCovered.map((skill, index) => (
                     <span

@@ -222,7 +222,6 @@ export const hasTimeConflict = (
 export const getRelativeTimeDescription = (
   date: string,
   time: string,
-  timezone: string
 ): string => {
   const dateTime = new Date(`${date}T${time}`);
   const now = new Date();

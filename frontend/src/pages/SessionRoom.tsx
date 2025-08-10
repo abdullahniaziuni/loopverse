@@ -7,6 +7,7 @@ import {
   Users,
   Clock,
   ArrowLeft,
+  Phone,
 } from "lucide-react";
 import { Layout } from "../components/layout";
 import { Button, Modal } from "../components/ui";
@@ -16,6 +17,10 @@ import { useAuth } from "../contexts/AuthContext";
 import { useToast } from "../hooks/useToast";
 import { apiService } from "../services/api";
 import { SessionFeedback } from "../components/feedback";
+import {
+  SessionCallManager,
+  initiateSessionCall,
+} from "../components/notifications/SessionCallNotification";
 
 interface SessionData {
   id: string;
@@ -70,21 +75,19 @@ export const SessionRoom: React.FC = () => {
             description: sessionData.description || "Learning session",
             mentor: {
               id: sessionData.mentorId?._id || sessionData.mentorId,
-              name:
-                sessionData.mentorId?.firstName 
-                // sessionData.mentorId?.lastName
-                  ? `${sessionData.mentorId.firstName} `
-                  : "Mentor",
+              name: sessionData.mentorId?.firstName
+                ? // sessionData.mentorId?.lastName
+                  `${sessionData.mentorId.firstName} `
+                : "Mentor",
               profilePicture:
                 sessionData.mentorId?.profilePicture ||
                 "/api/placeholder/40/40",
             },
             learner: {
               id: sessionData.learnerId?._id || sessionData.learnerId,
-              name:
-                sessionData.learnerId?.firstName
-                  ? `${sessionData.learnerId.firstName} `
-                  : "Learner",
+              name: sessionData.learnerId?.firstName
+                ? `${sessionData.learnerId.firstName} `
+                : "Learner",
               profilePicture:
                 sessionData.learnerId?.profilePicture ||
                 "/api/placeholder/40/40",
@@ -223,6 +226,33 @@ export const SessionRoom: React.FC = () => {
                 </span>
               </div>
 
+              {/* Call Button */}
+              <Button
+                onClick={() => {
+                  console.log("📞 Initiating call:", {
+                    sessionId: sessionId || "",
+                    targetUserId: otherParticipant.id,
+                    callerName: user.name || "Unknown",
+                    callerRole: user.role || "user",
+                    otherParticipant,
+                  });
+
+                  initiateSessionCall(
+                    sessionId || "",
+                    otherParticipant.id,
+                    user.name || "Unknown",
+                    user.role || "user"
+                  );
+                  showSuccess(`Calling ${otherParticipant.name}...`);
+                }}
+                variant="outline"
+                size="sm"
+                className="flex items-center space-x-1 border-green-300 text-green-600 hover:bg-green-50"
+              >
+                <Phone className="h-4 w-4" />
+                <span>Call</span>
+              </Button>
+
               {isUserMentor && (
                 <Button
                   onClick={() => setShowEndSessionModal(true)}
@@ -293,21 +323,27 @@ export const SessionRoom: React.FC = () => {
                 <div className="text-center">
                   <Video className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                   <h3 className="text-lg font-medium text-gray-900 mb-2">
-                    Ready to start the video call?
+                    Session Video Call
                   </h3>
                   <p className="text-gray-600 mb-4">
-                    Click the button below to join the video session
+                    Start a video call for this session. Both mentor and learner
+                    can join.
                   </p>
-                  <Button
-                    onClick={() => {
-                      updateSessionStatus("started");
-                      window.open(`/video-call/${sessionId}`, "_blank");
-                    }}
-                    className="px-6 py-2"
-                  >
-                    <Video className="h-4 w-4 mr-2" />
-                    Join Video Call
-                  </Button>
+                  <div className="space-y-3">
+                    <Button
+                      onClick={() => {
+                        updateSessionStatus("started");
+                        navigate(`/video-call/${sessionId}`);
+                      }}
+                      className="px-6 py-2 w-full"
+                    >
+                      <Video className="h-4 w-4 mr-2" />
+                      Join Video Call
+                    </Button>
+                    <p className="text-sm text-gray-500">
+                      Session ID: {sessionId}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -378,6 +414,13 @@ export const SessionRoom: React.FC = () => {
             onSubmitted={handleFeedbackSubmitted}
           />
         )}
+
+        {/* Session Call Manager */}
+        <SessionCallManager
+          userId={user.id}
+          userName={user.name || "Unknown"}
+          userRole={user.role || "user"}
+        />
       </div>
     </Layout>
   );

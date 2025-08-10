@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect } from "react";
 
 // Form validation rules
 export interface ValidationRule<T = any> {
@@ -15,9 +15,9 @@ export interface ValidationRule<T = any> {
   match?: string; // field name to match
 }
 
-export interface ValidationRules<T> {
+export type ValidationRules<T> = {
   [K in keyof T]?: ValidationRule<T[K]>;
-}
+};
 
 export interface FormState<T> {
   values: T;
@@ -44,7 +44,10 @@ const validateField = <T>(
   fieldName: string
 ): string | null => {
   // Required validation
-  if (rule.required && (!value || (typeof value === 'string' && !value.trim()))) {
+  if (
+    rule.required &&
+    (!value || (typeof value === "string" && !value.trim()))
+  ) {
     return `${fieldName} is required`;
   }
 
@@ -54,7 +57,7 @@ const validateField = <T>(
   }
 
   // String validations
-  if (typeof value === 'string') {
+  if (typeof value === "string") {
     if (rule.minLength && value.length < rule.minLength) {
       return `${fieldName} must be at least ${rule.minLength} characters`;
     }
@@ -81,7 +84,7 @@ const validateField = <T>(
   }
 
   // Number validations
-  if (typeof value === 'number') {
+  if (typeof value === "number") {
     if (rule.min !== undefined && value < rule.min) {
       return `${fieldName} must be at least ${rule.min}`;
     }
@@ -163,22 +166,25 @@ export function useForm<T extends Record<string, any>>({
   );
 
   // Set multiple values
-  const setValues = useCallback((newValues: Partial<T>) => {
-    setValues((prev) => ({ ...prev, ...newValues }));
+  const setValues = useCallback(
+    (newValues: Partial<T>) => {
+      setValues((prev) => ({ ...prev, ...newValues }));
 
-    if (validateOnChange) {
-      const newErrors = { ...errors };
-      Object.entries(newValues).forEach(([fieldName, value]) => {
-        const error = validateField(fieldName as keyof T, value);
-        if (error) {
-          newErrors[fieldName as keyof T] = error;
-        } else {
-          delete newErrors[fieldName as keyof T];
-        }
-      });
-      setErrors(newErrors);
-    }
-  }, [validateOnChange, validateField, errors]);
+      if (validateOnChange) {
+        const newErrors = { ...errors };
+        Object.entries(newValues).forEach(([fieldName, value]) => {
+          const error = validateField(fieldName as keyof T, value);
+          if (error) {
+            newErrors[fieldName as keyof T] = error;
+          } else {
+            delete newErrors[fieldName as keyof T];
+          }
+        });
+        setErrors(newErrors);
+      }
+    },
+    [validateOnChange, validateField, errors]
+  );
 
   // Handle field blur
   const handleBlur = useCallback(
@@ -220,7 +226,7 @@ export function useForm<T extends Record<string, any>>({
       try {
         await onSubmit(values);
       } catch (error) {
-        console.error('Form submission error:', error);
+        console.error("Form submission error:", error);
       } finally {
         setIsSubmitting(false);
       }
@@ -237,16 +243,23 @@ export function useForm<T extends Record<string, any>>({
   }, [initialValues]);
 
   // Set form errors (useful for server-side validation)
-  const setFormErrors = useCallback((newErrors: Partial<Record<keyof T, string>>) => {
-    setErrors(newErrors);
-  }, []);
+  const setFormErrors = useCallback(
+    (newErrors: Partial<Record<keyof T, string>>) => {
+      setErrors(newErrors);
+    },
+    []
+  );
 
   // Get field props for easy integration with form inputs
   const getFieldProps = useCallback(
     (fieldName: keyof T) => ({
       name: String(fieldName),
-      value: values[fieldName] || '',
-      onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+      value: values[fieldName] || "",
+      onChange: (
+        e: React.ChangeEvent<
+          HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+        >
+      ) => {
         setValue(fieldName, e.target.value);
       },
       onBlur: () => handleBlur(fieldName),
@@ -273,7 +286,7 @@ export function useForm<T extends Record<string, any>>({
   const getSelectProps = useCallback(
     (fieldName: keyof T) => ({
       name: String(fieldName),
-      value: values[fieldName] || '',
+      value: values[fieldName] || "",
       onChange: (value: any) => {
         setValue(fieldName, value);
       },
@@ -354,24 +367,3 @@ export interface FormFieldProps {
   children: React.ReactNode;
   className?: string;
 }
-
-export const FormField: React.FC<FormFieldProps> = ({
-  label,
-  error,
-  required,
-  children,
-  className = '',
-}) => {
-  return (
-    <div className={`form-field ${className}`}>
-      <label className="block text-sm font-medium text-gray-700 mb-1">
-        {label}
-        {required && <span className="text-red-500 ml-1">*</span>}
-      </label>
-      {children}
-      {error && (
-        <p className="mt-1 text-sm text-red-600">{error}</p>
-      )}
-    </div>
-  );
-};

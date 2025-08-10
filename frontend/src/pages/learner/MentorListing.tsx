@@ -10,9 +10,11 @@ import {
   ChevronDown,
   Calendar,
   DollarSign,
+  Video,
 } from "lucide-react";
 import { Layout } from "../../components/layout";
 import { Button, Input, Select } from "../../components/ui";
+import { BookingRequestModal } from "../../components/booking/BookingRequestModal";
 import { renderStars, COMMON_TIMEZONES, getUserTimezone } from "../../utils";
 import { Mentor } from "../../types";
 import { apiService } from "../../services/api";
@@ -48,7 +50,7 @@ export const MentorListing: React.FC = () => {
         });
 
         if (response.success && response.data) {
-          setMentors(response.data.mentors);
+          setMentors(response.data.mentors || []);
         } else {
           setError(response.error || "Failed to fetch mentors");
         }
@@ -501,89 +503,118 @@ interface MentorCardProps {
 }
 
 const MentorCard: React.FC<MentorCardProps> = ({ mentor }) => {
+  const [showBookingModal, setShowBookingModal] = useState(false);
+
   return (
-    <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-      <div className="flex items-start space-x-4">
-        <div className="flex-shrink-0 relative">
-          <img
-            className="h-16 w-16 rounded-lg object-cover"
-            src={
-              mentor.profilePicture ||
-              `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                mentor.name
-              )}&background=3B82F6&color=fff`
-            }
-            alt={mentor.name}
-          />
-          <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 rounded-full border-2 border-white animate-pulse"></div>
-        </div>
-        <div className="flex-1 min-w-0">
-          <h3 className="text-lg font-bold text-gray-900 truncate group-hover:gradient-text transition-all duration-300">
-            {mentor.name}
-          </h3>
-          <div className="flex items-center mt-1">
-            <div className="flex items-center bg-yellow-50 px-2 py-1 rounded-full">
-              <Star className="h-4 w-4 text-yellow-500 fill-current" />
-              <span className="text-sm font-semibold text-yellow-700 ml-1">
-                {mentor.rating || 0}
-              </span>
-              <span className="text-xs text-gray-500 ml-1">
-                ({mentor.totalRatings || 0} reviews)
-              </span>
+    <>
+      <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+        <div className="flex items-start space-x-4">
+          <div className="flex-shrink-0 relative">
+            <img
+              className="h-16 w-16 rounded-lg object-cover"
+              src={
+                mentor.profilePicture ||
+                `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                  mentor.name
+                )}&background=3B82F6&color=fff`
+              }
+              alt={mentor.name}
+            />
+            <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 rounded-full border-2 border-white animate-pulse"></div>
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="text-lg font-bold text-gray-900 truncate group-hover:gradient-text transition-all duration-300">
+              {mentor.name}
+            </h3>
+            <div className="flex items-center mt-1">
+              <div className="flex items-center bg-yellow-50 px-2 py-1 rounded-full">
+                <Star className="h-4 w-4 text-yellow-500 fill-current" />
+                <span className="text-sm font-semibold text-yellow-700 ml-1">
+                  {mentor.rating || 0}
+                </span>
+                <span className="text-xs text-gray-500 ml-1">
+                  ({mentor.totalRatings || 0} reviews)
+                </span>
+              </div>
             </div>
+          </div>
+        </div>
+
+        <p className="text-gray-600 text-sm mt-4 line-clamp-3 leading-relaxed">
+          {mentor.biography || mentor.bio}
+        </p>
+
+        {/* Enhanced Skills */}
+        <div className="mt-4">
+          <div className="flex flex-wrap gap-2">
+            {(mentor.skills || []).slice(0, 3).map((skill, index) => {
+              const skillName = typeof skill === "string" ? skill : skill.name;
+              return (
+                <span
+                  key={skillName}
+                  className={`px-3 py-1 text-xs font-semibold rounded-full transition-all duration-300 hover:scale-105 ${
+                    index === 0
+                      ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white"
+                      : index === 1
+                      ? "bg-gradient-to-r from-purple-500 to-purple-600 text-white"
+                      : "bg-gradient-to-r from-green-500 to-green-600 text-white"
+                  }`}
+                >
+                  {skillName}
+                </span>
+              );
+            })}
+            {(mentor.skills || []).length > 3 && (
+              <span className="px-3 py-1 bg-gray-100 text-gray-600 text-xs font-semibold rounded-full hover:bg-gray-200 transition-colors duration-300">
+                +{(mentor.skills || []).length - 3} more
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Enhanced Price and Action */}
+        <div className="mt-6 flex items-center justify-between">
+          <div className="text-sm">
+            <span className="text-2xl font-bold gradient-text">
+              ${mentor.hourlyRate}
+            </span>
+            <span className="text-gray-500 font-medium">/hour</span>
+          </div>
+          <div className="flex space-x-2">
+            <Button
+              size="sm"
+              onClick={() => setShowBookingModal(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              <Video className="w-4 h-4 mr-1" />
+              Book
+            </Button>
+            <Link to={`/mentors/${mentor.id}`}>
+              <Button
+                size="sm"
+                variant="outline"
+                className="group-hover:scale-105 transition-transform duration-300"
+              >
+                Profile
+              </Button>
+            </Link>
           </div>
         </div>
       </div>
 
-      <p className="text-gray-600 text-sm mt-4 line-clamp-3 leading-relaxed">
-        {mentor.biography || mentor.bio}
-      </p>
-
-      {/* Enhanced Skills */}
-      <div className="mt-4">
-        <div className="flex flex-wrap gap-2">
-          {(mentor.skills || []).slice(0, 3).map((skill, index) => {
-            const skillName = typeof skill === "string" ? skill : skill.name;
-            return (
-              <span
-                key={skillName}
-                className={`px-3 py-1 text-xs font-semibold rounded-full transition-all duration-300 hover:scale-105 ${
-                  index === 0
-                    ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white"
-                    : index === 1
-                    ? "bg-gradient-to-r from-purple-500 to-purple-600 text-white"
-                    : "bg-gradient-to-r from-green-500 to-green-600 text-white"
-                }`}
-              >
-                {skillName}
-              </span>
-            );
-          })}
-          {(mentor.skills || []).length > 3 && (
-            <span className="px-3 py-1 bg-gray-100 text-gray-600 text-xs font-semibold rounded-full hover:bg-gray-200 transition-colors duration-300">
-              +{(mentor.skills || []).length - 3} more
-            </span>
-          )}
-        </div>
-      </div>
-
-      {/* Enhanced Price and Action */}
-      <div className="mt-6 flex items-center justify-between">
-        <div className="text-sm">
-          <span className="text-2xl font-bold gradient-text">
-            ${mentor.hourlyRate}
-          </span>
-          <span className="text-gray-500 font-medium">/hour</span>
-        </div>
-        <Link to={`/mentors/${mentor.id}`}>
-          <Button
-            size="sm"
-            className="group-hover:scale-105 transition-transform duration-300"
-          >
-            View Profile
-          </Button>
-        </Link>
-      </div>
-    </div>
+      {/* Booking Modal */}
+      <BookingRequestModal
+        isOpen={showBookingModal}
+        onClose={() => setShowBookingModal(false)}
+        mentor={{
+          id: mentor.id,
+          name: mentor.name,
+          expertise: (mentor.skills || []).map((skill) =>
+            typeof skill === "string" ? skill : skill.name
+          ),
+          avatar: mentor.profilePicture,
+        }}
+      />
+    </>
   );
 };

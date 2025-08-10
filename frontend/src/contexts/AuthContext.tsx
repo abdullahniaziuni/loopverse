@@ -42,6 +42,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           const response = await apiService.getCurrentUser();
           if (response.success && response.data) {
             setUser(response.data);
+
+            // Connect to WebSocket with stored token and user ID
+            webSocketService.connect(storedToken, response.data.id);
+            console.log(
+              "🔌 AuthContext.initializeAuth - WebSocket connection initiated with user ID:",
+              response.data.id
+            );
           } else {
             // Token is invalid, clear stored data
             localStorage.removeItem("skillsphere_user");
@@ -93,9 +100,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         localStorage.setItem("auth_token", token);
         console.log("💾 AuthContext.login - Data saved to localStorage");
 
-        // Connect to WebSocket
-        webSocketService.connect(token);
-        console.log("🔌 AuthContext.login - WebSocket connection initiated");
+        // Connect to WebSocket with user ID
+        webSocketService.connect(token, user.id);
+        console.log(
+          "🔌 AuthContext.login - WebSocket connection initiated with user ID:",
+          user.id
+        );
       } else {
         console.error("❌ AuthContext.login - Login failed");
         console.error("📄 Response:", response);

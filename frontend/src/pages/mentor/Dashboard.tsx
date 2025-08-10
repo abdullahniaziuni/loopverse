@@ -9,19 +9,29 @@ import {
   DollarSign,
   Bell,
   Video,
+  Check,
+  X,
+  MessageSquare,
 } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { Layout } from "../../components/layout";
 import { Button } from "../../components/ui";
+import { useNotifications } from "../../hooks/useNotifications";
 import { formatDate, formatTime } from "../../utils";
 import { apiService } from "../../services/api";
 import { Session } from "../../types";
 
 export const MentorDashboard: React.FC = () => {
   const { user } = useAuth();
+  const { notifications, respondToBooking } = useNotifications();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [pendingRequests, setPendingRequests] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Filter booking request notifications
+  const bookingRequests = notifications.filter(
+    (n) => n.type === "booking_request" && !n.read
+  );
 
   // Fetch mentor dashboard data
   useEffect(() => {
@@ -216,11 +226,10 @@ export const MentorDashboard: React.FC = () => {
                     My Sessions
                   </Button>
                 </Link>
-                {/* Debug Video Call Button */}
-                <Link to="/video-call/demo-session-456">
-                  <Button className="w-full justify-start bg-orange-600 hover:bg-orange-700 text-white">
+                <Link to="/video-call/demo-session-123">
+                  <Button className="w-full justify-start bg-blue-600 hover:bg-blue-700 text-white">
                     <Video className="h-4 w-4 mr-2" />
-                    🧪 Test Video Call
+                    Join Session
                   </Button>
                 </Link>
               </div>
@@ -257,10 +266,10 @@ export const MentorDashboard: React.FC = () => {
             <div className="bg-white rounded-lg shadow p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold text-gray-900">
-                  Pending Booking Requests
-                  {pendingRequests.length > 0 && (
+                  Booking Requests
+                  {bookingRequests.length > 0 && (
                     <span className="ml-2 bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full">
-                      {pendingRequests.length}
+                      {bookingRequests.length}
                     </span>
                   )}
                 </h2>
@@ -271,44 +280,85 @@ export const MentorDashboard: React.FC = () => {
                 </Link>
               </div>
 
-              {pendingRequests.length > 0 ? (
+              {bookingRequests.length > 0 ? (
                 <div className="space-y-4">
-                  {pendingRequests.slice(0, 2).map((request) => (
-                    <div
-                      key={request.id}
-                      className="border border-gray-200 rounded-lg p-4"
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <h3 className="font-medium text-gray-900">
-                          {request.learner?.name || request.learnerName}
-                        </h3>
-                        <span className="text-sm text-gray-500">
-                          {formatDate(request.startTime || request.date)} at{" "}
-                          {formatTime(request.startTime)}
-                        </span>
+                  {bookingRequests.slice(0, 3).map((notification) => {
+                    const request = notification.data;
+                    return (
+                      <div
+                        key={notification.id}
+                        className="border border-gray-200 rounded-lg p-4 bg-blue-50"
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <h3 className="font-medium text-gray-900">
+                            {request.learnerName}
+                          </h3>
+                          <span className="text-sm text-gray-500">
+                            {request.preferredDate} at {request.preferredTime}
+                          </span>
+                        </div>
+                        <div className="mb-2">
+                          <span className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+                            {request.sessionType
+                              .replace("-", " ")
+                              .replace(/\b\w/g, (l) => l.toUpperCase())}
+                          </span>
+                        </div>
+                        {request.message && (
+                          <p className="text-sm text-gray-600 mb-3 italic">
+                            "{request.message}"
+                          </p>
+                        )}
+                        <div className="flex space-x-2">
+                          <Button
+                            size="sm"
+                            className="flex-1 bg-green-600 hover:bg-green-700"
+                            onClick={async () => {
+                              try {
+                                await respondToBooking(request.id, "accepted");
+                                // Optionally show success message
+                              } catch (error) {
+                                console.error(
+                                  "Failed to accept booking:",
+                                  error
+                                );
+                              }
+                            }}
+                          >
+                            <Check className="w-4 h-4 mr-1" />
+                            Accept
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="flex-1 border-red-300 text-red-600 hover:bg-red-50"
+                            onClick={async () => {
+                              try {
+                                await respondToBooking(request.id, "rejected");
+                                // Optionally show success message
+                              } catch (error) {
+                                console.error(
+                                  "Failed to reject booking:",
+                                  error
+                                );
+                              }
+                            }}
+                          >
+                            <X className="w-4 h-4 mr-1" />
+                            Decline
+                          </Button>
+                        </div>
                       </div>
-                      <p className="text-sm text-gray-600 mb-3">
-                        "
-                        {request.message ||
-                          request.notes ||
-                          "No message provided"}
-                        "
-                      </p>
-                      <div className="flex space-x-2">
-                        <Button size="sm" className="flex-1">
-                          Accept
-                        </Button>
-                        <Button size="sm" variant="outline" className="flex-1">
-                          Decline
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="text-center py-8">
                   <Bell className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-600">No pending requests</p>
+                  <p className="text-gray-600">No pending booking requests</p>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Learners can send you booking requests from your profile
+                  </p>
                 </div>
               )}
             </div>

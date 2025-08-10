@@ -1,5 +1,7 @@
 // Performance monitoring and optimization utilities
 
+import { lazy } from "react";
+
 interface PerformanceMetrics {
   loadTime: number;
   renderTime: number;
@@ -36,21 +38,22 @@ class PerformanceMonitor {
 
   private initializeObservers() {
     // Track navigation timing
-    if ('PerformanceObserver' in window) {
+    if ("PerformanceObserver" in window) {
       try {
         const navObserver = new PerformanceObserver((list) => {
           const entries = list.getEntries();
           entries.forEach((entry) => {
-            if (entry.entryType === 'navigation') {
+            if (entry.entryType === "navigation") {
               const navEntry = entry as PerformanceNavigationTiming;
-              this.metrics.loadTime = navEntry.loadEventEnd - navEntry.navigationStart;
+              this.metrics.loadTime =
+                navEntry.loadEventEnd - navEntry.navigationStart;
             }
           });
         });
-        navObserver.observe({ entryTypes: ['navigation'] });
+        navObserver.observe({ entryTypes: ["navigation"] });
         this.observers.push(navObserver);
       } catch (e) {
-        console.warn('Navigation timing observer not supported');
+        console.warn("Navigation timing observer not supported");
       }
 
       // Track resource timing
@@ -59,10 +62,10 @@ class PerformanceMonitor {
           const entries = list.getEntries();
           this.metrics.networkRequests += entries.length;
         });
-        resourceObserver.observe({ entryTypes: ['resource'] });
+        resourceObserver.observe({ entryTypes: ["resource"] });
         this.observers.push(resourceObserver);
       } catch (e) {
-        console.warn('Resource timing observer not supported');
+        console.warn("Resource timing observer not supported");
       }
 
       // Track largest contentful paint
@@ -70,12 +73,12 @@ class PerformanceMonitor {
         const lcpObserver = new PerformanceObserver((list) => {
           const entries = list.getEntries();
           const lastEntry = entries[entries.length - 1];
-          console.log('LCP:', lastEntry.startTime);
+          console.log("LCP:", lastEntry.startTime);
         });
-        lcpObserver.observe({ entryTypes: ['largest-contentful-paint'] });
+        lcpObserver.observe({ entryTypes: ["largest-contentful-paint"] });
         this.observers.push(lcpObserver);
       } catch (e) {
-        console.warn('LCP observer not supported');
+        console.warn("LCP observer not supported");
       }
 
       // Track first input delay
@@ -83,22 +86,23 @@ class PerformanceMonitor {
         const fidObserver = new PerformanceObserver((list) => {
           const entries = list.getEntries();
           entries.forEach((entry) => {
-            this.metrics.interactionTime = entry.processingStart - entry.startTime;
+            this.metrics.interactionTime =
+              entry.processingStart - entry.startTime;
           });
         });
-        fidObserver.observe({ entryTypes: ['first-input'] });
+        fidObserver.observe({ entryTypes: ["first-input"] });
         this.observers.push(fidObserver);
       } catch (e) {
-        console.warn('FID observer not supported');
+        console.warn("FID observer not supported");
       }
     }
   }
 
   private trackPageLoad() {
-    if (document.readyState === 'complete') {
+    if (document.readyState === "complete") {
       this.recordLoadTime();
     } else {
-      window.addEventListener('load', () => this.recordLoadTime());
+      window.addEventListener("load", () => this.recordLoadTime());
     }
   }
 
@@ -112,12 +116,13 @@ class PerformanceMonitor {
   // Track component render performance
   trackComponentRender(componentName: string, renderTime: number) {
     const existing = this.componentMetrics.get(componentName);
-    
+
     if (existing) {
       existing.renderCount++;
       existing.lastRenderTime = renderTime;
-      existing.averageRenderTime = 
-        (existing.averageRenderTime * (existing.renderCount - 1) + renderTime) / existing.renderCount;
+      existing.averageRenderTime =
+        (existing.averageRenderTime * (existing.renderCount - 1) + renderTime) /
+        existing.renderCount;
     } else {
       this.componentMetrics.set(componentName, {
         componentName,
@@ -140,13 +145,13 @@ class PerformanceMonitor {
   // Track errors
   trackError(error: Error) {
     this.metrics.errorCount++;
-    console.error('Performance Monitor - Error tracked:', error);
+    console.error("Performance Monitor - Error tracked:", error);
   }
 
   // Get current metrics
   getMetrics(): PerformanceMetrics {
     // Update memory usage if available
-    if ('memory' in performance) {
+    if ("memory" in performance) {
       this.metrics.memoryUsage = (performance as any).memory.usedJSHeapSize;
     }
 
@@ -179,25 +184,36 @@ Page Metrics:
 - Load Time: ${metrics.loadTime}ms
 - Render Time: ${metrics.renderTime}ms
 - Interaction Time: ${metrics.interactionTime}ms
-- Memory Usage: ${metrics.memoryUsage ? `${(metrics.memoryUsage / 1024 / 1024).toFixed(2)}MB` : 'N/A'}
+- Memory Usage: ${
+      metrics.memoryUsage
+        ? `${(metrics.memoryUsage / 1024 / 1024).toFixed(2)}MB`
+        : "N/A"
+    }
 - Network Requests: ${metrics.networkRequests}
 - Error Count: ${metrics.errorCount}
 
 Component Metrics:
-${componentMetrics.map(c => 
-  `- ${c.componentName}: ${c.renderCount} renders, avg ${c.averageRenderTime.toFixed(2)}ms`
-).join('\n')}
+${componentMetrics
+  .map(
+    (c) =>
+      `- ${c.componentName}: ${
+        c.renderCount
+      } renders, avg ${c.averageRenderTime.toFixed(2)}ms`
+  )
+  .join("\n")}
 
 Slow Components (>16ms):
-${slowComponents.map(c => 
-  `- ${c.componentName}: avg ${c.averageRenderTime.toFixed(2)}ms`
-).join('\n') || 'None'}
+${
+  slowComponents
+    .map((c) => `- ${c.componentName}: avg ${c.averageRenderTime.toFixed(2)}ms`)
+    .join("\n") || "None"
+}
     `.trim();
   }
 
   // Cleanup observers
   cleanup() {
-    this.observers.forEach(observer => observer.disconnect());
+    this.observers.forEach((observer) => observer.disconnect());
     this.observers = [];
   }
 }
@@ -211,7 +227,7 @@ export const usePerformanceTracking = (componentName: string) => {
 
   React.useEffect(() => {
     startTime.current = performance.now();
-    
+
     return () => {
       const renderTime = performance.now() - startTime.current;
       performanceMonitor.trackComponentRender(componentName, renderTime);
@@ -225,21 +241,22 @@ export const usePerformanceTracking = (componentName: string) => {
   return { trackPropsChange };
 };
 
-// Higher-order component for performance tracking
-export const withPerformanceTracking = <P extends object>(
-  Component: React.ComponentType<P>,
-  componentName?: string
+// Performance tracking utility
+export const trackComponentPerformance = (
+  componentName: string,
+  renderTime: number
 ) => {
-  const WrappedComponent = (props: P) => {
-    const name = componentName || Component.displayName || Component.name || 'Unknown';
-    usePerformanceTracking(name);
-    
-    return <Component {...props} />;
-  };
+  console.log(
+    `🎯 Component ${componentName} rendered in ${renderTime.toFixed(2)}ms`
+  );
 
-  WrappedComponent.displayName = `withPerformanceTracking(${Component.displayName || Component.name})`;
-
-  return WrappedComponent;
+  if (renderTime > 100) {
+    console.warn(
+      `⚠️ Slow render detected: ${componentName} took ${renderTime.toFixed(
+        2
+      )}ms`
+    );
+  }
 };
 
 // Utility functions
@@ -260,10 +277,7 @@ export const measureAsync = async <T>(
   }
 };
 
-export const measureSync = <T>(
-  operation: () => T,
-  label: string
-): T => {
+export const measureSync = <T>(operation: () => T, label: string): T => {
   const start = performance.now();
   try {
     const result = operation();
@@ -283,7 +297,7 @@ export const debounce = <T extends (...args: any[]) => any>(
   wait: number
 ): ((...args: Parameters<T>) => void) => {
   let timeout: NodeJS.Timeout;
-  
+
   return (...args: Parameters<T>) => {
     clearTimeout(timeout);
     timeout = setTimeout(() => func(...args), wait);
@@ -296,33 +310,26 @@ export const throttle = <T extends (...args: any[]) => any>(
   limit: number
 ): ((...args: Parameters<T>) => void) => {
   let inThrottle: boolean;
-  
+
   return (...args: Parameters<T>) => {
     if (!inThrottle) {
       func(...args);
       inThrottle = true;
-      setTimeout(() => inThrottle = false, limit);
+      setTimeout(() => (inThrottle = false), limit);
     }
   };
 };
 
 // Lazy loading utility
-export const createLazyComponent = <T extends React.ComponentType<any>>(
-  importFunc: () => Promise<{ default: T }>,
-  fallback?: React.ComponentType
+export const createLazyImport = <T extends React.ComponentType<any>>(
+  importFunc: () => Promise<{ default: T }>
 ) => {
-  const LazyComponent = React.lazy(importFunc);
-  
-  return (props: React.ComponentProps<T>) => (
-    <React.Suspense fallback={fallback ? <fallback /> : <div>Loading...</div>}>
-      <LazyComponent {...props} />
-    </React.Suspense>
-  );
+  return lazy(importFunc);
 };
 
 // Memory usage tracking
 export const trackMemoryUsage = () => {
-  if ('memory' in performance) {
+  if ("memory" in performance) {
     const memory = (performance as any).memory;
     return {
       used: memory.usedJSHeapSize,
@@ -336,18 +343,20 @@ export const trackMemoryUsage = () => {
 
 // Bundle size analyzer
 export const analyzeBundleSize = () => {
-  const scripts = Array.from(document.querySelectorAll('script[src]'));
-  const styles = Array.from(document.querySelectorAll('link[rel="stylesheet"]'));
-  
+  const scripts = Array.from(document.querySelectorAll("script[src]"));
+  const styles = Array.from(
+    document.querySelectorAll('link[rel="stylesheet"]')
+  );
+
   return {
     scriptCount: scripts.length,
     styleCount: styles.length,
-    scripts: scripts.map(script => ({
+    scripts: scripts.map((script) => ({
       src: (script as HTMLScriptElement).src,
       async: (script as HTMLScriptElement).async,
       defer: (script as HTMLScriptElement).defer,
     })),
-    styles: styles.map(style => ({
+    styles: styles.map((style) => ({
       href: (style as HTMLLinkElement).href,
     })),
   };
