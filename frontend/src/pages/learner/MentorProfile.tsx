@@ -16,6 +16,8 @@ import { useToast } from "../../hooks/useToast";
 import { apiService } from "../../services/api";
 import { Mentor } from "../../types";
 import { RatingDisplay, FeedbackSummary } from "../../components/feedback";
+import { ChatWindow } from "../../components/messaging/ChatWindow";
+import { useAuth } from "../../contexts/AuthContext";
 
 export const MentorProfile: React.FC = () => {
   const { mentorId } = useParams<{ mentorId: string }>();
@@ -26,6 +28,17 @@ export const MentorProfile: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   const { success: showSuccess, error: showError } = useToast();
+  const { user } = useAuth();
+
+  // Chat functionality
+  const [showChat, setShowChat] = useState(false);
+  const [chatParticipant, setChatParticipant] = useState<{
+    id: string;
+    name: string;
+    role: string;
+    avatar: string;
+    isOnline: boolean;
+  } | null>(null);
 
   const shareProfile = async () => {
     const publicUrl = `${window.location.origin}/mentor/${mentorId}/public`;
@@ -47,41 +60,68 @@ export const MentorProfile: React.FC = () => {
     }
   };
 
-  // Compute simple available slots for next 7 days from mentor.availability (UTC-based)
-  const availableSlots = React.useMemo(() => {
-    if (!mentor?.availability)
-      return [] as {
-        id: string;
-        date: string;
-        startTime: string;
-        endTime: string;
-      }[];
-    const slots: {
+  // State for real availability
+  const [availableSlots, setAvailableSlots] = React.useState<
+    {
       id: string;
       date: string;
       startTime: string;
       endTime: string;
-    }[] = [];
-    const now = new Date();
-    for (let d = 0; d < 14; d++) {
-      const day = new Date(now);
-      day.setDate(now.getDate() + d);
-      const dayOfWeek = day.getDay();
-      const dateStr = day.toISOString().split("T")[0];
-      mentor.availability
-        .filter((s: any) => s.dayOfWeek === dayOfWeek)
-        .forEach((s: any, idx: number) => {
-          slots.push({
-            id: `${dateStr}-${idx}`,
-            date: dateStr,
-            startTime: s.startTime,
-            endTime: s.endTime,
+    }[]
+  >([]);
+
+  // Fetch real availability from the API
+  React.useEffect(() => {
+    const fetchAvailability = async () => {
+      if (!mentorId) return;
+
+      try {
+        const response = await apiService.request(
+          `/availability/mentor/${mentorId}`
+        );
+        if (response.success && response.data) {
+          const slots: {
+            id: string;
+            date: string;
+            startTime: string;
+            endTime: string;
+          }[] = [];
+
+          response.data.availabilityDates?.forEach((dateObj: any) => {
+            const dateString = new Date(dateObj.date)
+              .toISOString()
+              .split("T")[0];
+
+            dateObj.timeSlots.forEach((slot: any) => {
+              if (!slot.isBooked) {
+                // Only show available slots
+                slots.push({
+                  id: slot._id || `${dateObj._id}-${slot.startTime}`,
+                  date: dateString,
+                  startTime: slot.startTime,
+                  endTime: slot.endTime,
+                });
+              }
+            });
           });
-        });
-      if (slots.length >= 12) break;
-    }
-    return slots;
-  }, [mentor?.availability]);
+
+          // Sort by date and time
+          slots.sort((a, b) => {
+            if (a.date !== b.date) return a.date.localeCompare(b.date);
+            return a.startTime.localeCompare(b.startTime);
+          });
+
+          setAvailableSlots(slots.slice(0, 12)); // Show first 12 slots
+        }
+      } catch (error) {
+        console.error("Failed to fetch mentor availability:", error);
+        // Fallback to empty array
+        setAvailableSlots([]);
+      }
+    };
+
+    fetchAvailability();
+  }, [mentorId]);
 
   // Fetch mentor data
   useEffect(() => {
@@ -222,7 +262,22 @@ export const MentorProfile: React.FC = () => {
               <Calendar className="h-4 w-4 mr-2" />
               Book Session
             </Button>
-            <Button variant="outline" className="flex items-center">
+            <Button
+              variant="outline"
+              className="flex items-center"
+              onClick={() => {
+                if (mentor) {
+                  setChatParticipant({
+                    id: mentor.id,
+                    name: mentor.name,
+                    role: "mentor",
+                    avatar: mentor.profilePicture || "",
+                    isOnline: true,
+                  });
+                  setShowChat(true);
+                }
+              }}
+            >
               <MessageCircle className="h-4 w-4 mr-2" />
               Message
             </Button>
@@ -352,7 +407,22 @@ export const MentorProfile: React.FC = () => {
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
                 Contact
               </h3>
-              <Button variant="outline" className="w-full mb-3">
+              <Button
+                variant="outline"
+                className="w-full mb-3"
+                onClick={() => {
+                  if (mentor) {
+                    setChatParticipant({
+                      id: mentor.id,
+                      name: mentor.name,
+                      role: "mentor",
+                      avatar: mentor.profilePicture || "",
+                      isOnline: true,
+                    });
+                    setShowChat(true);
+                  }
+                }}
+              >
                 <MessageCircle className="h-4 w-4 mr-2" />
                 Send Message
               </Button>
@@ -422,6 +492,20 @@ export const MentorProfile: React.FC = () => {
           </div>
         )}
       </Modal>
+
+      {/* Chat Window */}
+      {showChat && chatParticipant && (
+        <ChatWindow
+          isOpen={showChat}
+          onClose={() => setShowChat(false)}
+          participant={chatParticipant}
+          onStartVideoCall={() => {
+            // Start video call with the mentor
+            const sessionId = `session_${Date.now()}`;
+            window.open(`/video-call/${sessionId}`, "_blank");
+          }}
+        />
+      )}
     </Layout>
   );
 };

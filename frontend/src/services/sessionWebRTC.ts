@@ -119,6 +119,14 @@ class SessionWebRTCService {
     socket.off("session_webrtc_ice_candidate");
     socket.off("file_shared_in_session");
 
+    // 🌍 GLOBAL VIDEO CALL - Remove global listeners
+    socket.off("user_joined_call");
+    socket.off("user_left_call");
+    socket.off("current_call_participants");
+    socket.off("webrtc_offer");
+    socket.off("webrtc_answer");
+    socket.off("webrtc_ice_candidate");
+
     // Handle new participants joining session call
     socket.on(
       "user_joined_session_call",
@@ -151,6 +159,33 @@ class SessionWebRTCService {
         }
       }
     );
+
+    // 🌍 GLOBAL VIDEO CALL - Handle global participants joining
+    socket.on(
+      "user_joined_call",
+      (data: { userId: string; userData: any; sessionId: string }) => {
+        console.log("🌍 Received user_joined_call event (global):", data);
+        this.handleUserJoinedCall(data.userId, data.userData);
+      }
+    );
+
+    // 🌍 GLOBAL VIDEO CALL - Handle global participants leaving
+    socket.on(
+      "user_left_call",
+      (data: { userId: string; sessionId: string }) => {
+        console.log("🌍 Received user_left_call event (global):", data);
+        this.handleUserLeftCall(data.userId);
+      }
+    );
+
+    // 🌍 GLOBAL VIDEO CALL - Handle current global participants
+    socket.on("current_call_participants", (participants: any[]) => {
+      console.log(
+        "🌍 Received current_call_participants event (global):",
+        participants
+      );
+      this.handleCurrentParticipants(participants);
+    });
 
     // Handle WebRTC signaling for session
     socket.on(
@@ -215,7 +250,34 @@ class SessionWebRTCService {
       }
     );
 
-    console.log("✅ WebSocket listeners attached for session video call");
+    // 🌍 GLOBAL VIDEO CALL - Handle global WebRTC signaling
+    socket.on(
+      "webrtc_offer",
+      (data: { fromUserId: string; offer: RTCSessionDescriptionInit }) => {
+        console.log("🌍 Received webrtc_offer event (global):", data);
+        this.handleOffer(data.fromUserId, data.offer);
+      }
+    );
+
+    socket.on(
+      "webrtc_answer",
+      (data: { fromUserId: string; answer: RTCSessionDescriptionInit }) => {
+        console.log("🌍 Received webrtc_answer event (global):", data);
+        this.handleAnswer(data.fromUserId, data.answer);
+      }
+    );
+
+    socket.on(
+      "webrtc_ice_candidate",
+      (data: { fromUserId: string; candidate: RTCIceCandidateInit }) => {
+        console.log("🌍 Received webrtc_ice_candidate event (global):", data);
+        this.handleIceCandidate(data.fromUserId, data.candidate);
+      }
+    );
+
+    console.log(
+      "✅ WebSocket listeners attached for session video call (including global)"
+    );
   }
 
   async joinCall(

@@ -280,15 +280,18 @@ class WebSocketService {
     }
   }
 
-  // Session video call methods
+  // Session video call methods (secretly uses global video call)
   joinSessionCall(sessionId: string, userData: any): void {
     if (this.socket?.connected) {
       console.log(
-        `🎯 Emitting join_session_call for session ${sessionId} with data:`,
+        `🎯 Joining session call ${sessionId} (secretly global) with data:`,
         userData
       );
-      this.socket.emit("join_session_call", { sessionId, userData });
-      console.log(`🎯 Joined session video call: ${sessionId}`);
+      // Use the global video call handler instead of session-specific
+      this.socket.emit("join_video_call", { sessionId, userData });
+      console.log(
+        `🎯 Joined global video call (frontend thinks: ${sessionId})`
+      );
     } else {
       console.error("❌ Cannot join session call - WebSocket not connected");
     }
@@ -296,12 +299,13 @@ class WebSocketService {
 
   leaveSessionCall(sessionId: string): void {
     if (this.socket?.connected) {
-      this.socket.emit("leave_session_call", { sessionId });
-      console.log(`🚪 Left session video call: ${sessionId}`);
+      // Use the global video call leave handler
+      this.socket.emit("leave_video_call", sessionId);
+      console.log(`🚪 Left global video call (frontend thinks: ${sessionId})`);
     }
   }
 
-  // Session WebRTC signaling methods
+  // Session WebRTC signaling methods (secretly uses global WebRTC)
   sendSessionWebRTCOffer(
     sessionId: string,
     targetUserId: string,
@@ -312,8 +316,8 @@ class WebSocketService {
         `📞 Emitting session_webrtc_offer to ${targetUserId} in session ${sessionId}:`,
         { sessionId, targetUserId, offer }
       );
-      this.socket.emit("session_webrtc_offer", {
-        sessionId,
+      // Use global WebRTC signaling instead of session-specific
+      this.socket.emit("webrtc_offer", {
         targetUserId,
         offer,
       });
@@ -335,8 +339,8 @@ class WebSocketService {
         `📞 Emitting session_webrtc_answer to ${targetUserId} in session ${sessionId}:`,
         { sessionId, targetUserId, answer }
       );
-      this.socket.emit("session_webrtc_answer", {
-        sessionId,
+      // Use global WebRTC signaling instead of session-specific
+      this.socket.emit("webrtc_answer", {
         targetUserId,
         answer,
       });
@@ -358,8 +362,8 @@ class WebSocketService {
         `🧊 Emitting session_webrtc_ice_candidate to ${targetUserId} in session ${sessionId}:`,
         { sessionId, targetUserId, candidate }
       );
-      this.socket.emit("session_webrtc_ice_candidate", {
-        sessionId,
+      // Use global WebRTC signaling instead of session-specific
+      this.socket.emit("webrtc_ice_candidate", {
         targetUserId,
         candidate,
       });

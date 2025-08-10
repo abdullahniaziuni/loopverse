@@ -30,7 +30,7 @@ import { AdminDashboard } from "./pages/admin/Dashboard";
 import { MentorApprovals } from "./pages/admin/MentorApprovals";
 import { FeedbackManagement } from "./pages/admin/FeedbackManagement";
 import { VideoCall } from "./pages/VideoCall";
-import { GlobalVideoCallPage } from "./pages/GlobalVideoCallPage";
+
 import { Settings } from "./pages/Settings";
 import { NotFound } from "./pages/NotFound";
 import { SessionRoom } from "./pages/SessionRoom";
@@ -137,6 +137,14 @@ const AppWithNotifications: React.FC = () => {
           }
         />
         <Route
+          path="/mentor/requests"
+          element={
+            <ProtectedRoute>
+              <BookingRequests />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/mentor/sessions"
           element={
             <ProtectedRoute>
@@ -185,14 +193,6 @@ const AppWithNotifications: React.FC = () => {
           element={
             <ProtectedRoute>
               <VideoCall />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/global-video-call"
-          element={
-            <ProtectedRoute>
-              <GlobalVideoCallPage />
             </ProtectedRoute>
           }
         />

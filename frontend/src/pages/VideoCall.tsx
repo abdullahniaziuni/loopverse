@@ -188,15 +188,6 @@ export const VideoCall: React.FC = () => {
 
         <div className="flex items-center space-x-2">
           <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigate("/global-video-call")}
-            className="text-blue-600 border-blue-600 hover:bg-blue-50"
-          >
-            <Users className="h-4 w-4 mr-1" />
-            Global Call
-          </Button>
-          <Button
             variant="ghost"
             size="sm"
             onClick={() => setIsAIAssistantOpen(true)}

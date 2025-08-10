@@ -209,7 +209,7 @@ export const MentorDashboard: React.FC = () => {
                     Manage Availability
                   </Button>
                 </Link>
-                <Link to="/mentor/requests">
+                <Link to="/mentor/bookings">
                   <Button variant="outline" className="w-full justify-start">
                     <Bell className="h-4 w-4 mr-2" />
                     Booking Requests
@@ -273,7 +273,7 @@ export const MentorDashboard: React.FC = () => {
                     </span>
                   )}
                 </h2>
-                <Link to="/mentor/requests">
+                <Link to="/mentor/bookings">
                   <Button variant="ghost" size="sm">
                     View All
                   </Button>

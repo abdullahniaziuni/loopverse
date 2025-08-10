@@ -11,6 +11,7 @@ import {
   Calendar,
   DollarSign,
   Video,
+  MessageCircle,
 } from "lucide-react";
 import { Layout } from "../../components/layout";
 import { Button, Input, Select } from "../../components/ui";
@@ -18,6 +19,8 @@ import { BookingRequestModal } from "../../components/booking/BookingRequestModa
 import { renderStars, COMMON_TIMEZONES, getUserTimezone } from "../../utils";
 import { Mentor } from "../../types";
 import { apiService } from "../../services/api";
+import { ChatWindow } from "../../components/messaging/ChatWindow";
+import { useAuth } from "../../contexts/AuthContext";
 
 export const MentorListing: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -26,6 +29,17 @@ export const MentorListing: React.FC = () => {
   const [mentors, setMentors] = useState<Mentor[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { user } = useAuth();
+
+  // Chat functionality
+  const [showChat, setShowChat] = useState(false);
+  const [chatParticipant, setChatParticipant] = useState<{
+    id: string;
+    name: string;
+    role: string;
+    avatar: string;
+    isOnline: boolean;
+  } | null>(null);
 
   // Advanced filters
   const [showFilters, setShowFilters] = useState(false);
@@ -468,7 +482,20 @@ export const MentorListing: React.FC = () => {
             {filteredMentors.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredMentors.map((mentor) => (
-                  <MentorCard key={mentor.id} mentor={mentor} />
+                  <MentorCard
+                    key={mentor.id}
+                    mentor={mentor}
+                    onStartChat={(mentor) => {
+                      setChatParticipant({
+                        id: mentor.id,
+                        name: mentor.name,
+                        role: "mentor",
+                        avatar: mentor.profilePicture || "",
+                        isOnline: true,
+                      });
+                      setShowChat(true);
+                    }}
+                  />
                 ))}
               </div>
             ) : (
@@ -494,15 +521,30 @@ export const MentorListing: React.FC = () => {
           </>
         )}
       </div>
+
+      {/* Chat Window */}
+      {showChat && chatParticipant && (
+        <ChatWindow
+          isOpen={showChat}
+          onClose={() => setShowChat(false)}
+          participant={chatParticipant}
+          onStartVideoCall={() => {
+            // Start video call with the mentor
+            const sessionId = `session_${Date.now()}`;
+            window.open(`/video-call/${sessionId}`, "_blank");
+          }}
+        />
+      )}
     </Layout>
   );
 };
 
 interface MentorCardProps {
   mentor: Mentor;
+  onStartChat: (mentor: Mentor) => void;
 }
 
-const MentorCard: React.FC<MentorCardProps> = ({ mentor }) => {
+const MentorCard: React.FC<MentorCardProps> = ({ mentor, onStartChat }) => {
   const [showBookingModal, setShowBookingModal] = useState(false);
 
   return (
@@ -588,6 +630,14 @@ const MentorCard: React.FC<MentorCardProps> = ({ mentor }) => {
             >
               <Video className="w-4 h-4 mr-1" />
               Book
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => onStartChat(mentor)}
+            >
+              <MessageCircle className="w-4 h-4 mr-1" />
+              Message
             </Button>
             <Link to={`/learner/mentors/${mentor.id}`}>
               <Button

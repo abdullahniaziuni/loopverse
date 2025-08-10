@@ -21,12 +21,23 @@ function initializeWebSocket(server) {
     },
   });
 
-  // Authentication middleware for socket connections
+  // Authentication middleware for socket connections (relaxed for global video calls)
   io.use((socket, next) => {
     try {
       const token = socket.handshake.auth.token;
-      if (!token) {
-        return next(new Error("Authentication error"));
+      const userId = socket.handshake.auth.userId;
+
+      // 🌍 GLOBAL VIDEO CALL: Allow connections without strict auth
+      if (!token || token === "fake_token" || token.startsWith("fake_")) {
+        // Allow fake/test connections for global video calls
+        const guestUserId = userId || `guest_${Date.now()}`;
+        socket.userId = guestUserId;
+        socket.userRole = "guest";
+        socket.userType = "guest";
+        console.log(
+          `✅ Guest user ${socket.userId} connected for global video call`
+        );
+        return next();
       }
 
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -35,7 +46,15 @@ function initializeWebSocket(server) {
       socket.userType = decoded.userType;
       next();
     } catch (err) {
-      next(new Error("Authentication error"));
+      // 🌍 FALLBACK: Allow connection as guest for global video calls
+      const fallbackUserId = userId || `guest_${Date.now()}`;
+      socket.userId = fallbackUserId;
+      socket.userRole = "guest";
+      socket.userType = "guest";
+      console.log(
+        `✅ Fallback guest user ${socket.userId} connected (auth failed: ${err.message})`
+      );
+      next();
     }
   });
 
@@ -48,6 +67,10 @@ function initializeWebSocket(server) {
 
     // Join role-based rooms
     socket.join(`role_${socket.userRole}`);
+
+    // 🌍 JOIN GLOBAL CHAT ROOM - All users join the same room
+    socket.join("global_chat");
+    console.log(`User ${socket.userId} joined global chat room`);
 
     // Handle dynamic user ID setting
     socket.on("set_user_id", (data) => {
@@ -75,22 +98,32 @@ function initializeWebSocket(server) {
       console.log(`User ${socket.userId} left session ${sessionId}`);
     });
 
-    // Handle global video call room joining
-    socket.on("join_global_call", (userData) => {
-      socket.join("global_video_call");
+    // 🎥 GLOBAL VIDEO CALL - All video calls go to room "1234"
+    socket.on("join_video_call", (data) => {
+      const { sessionId, userData } = data;
+
+      // 🌍 FORCE EVERYONE INTO ROOM "1234"
+      const globalRoomId = "1234";
+      socket.join(globalRoomId);
       socket.userData = userData;
-      console.log(`User ${socket.userId} joined global video call`);
+      socket.currentSessionId = sessionId; // Store for frontend display
+      socket.globalRoomId = globalRoomId;
+
+      console.log(
+        `🎥 User ${socket.userId} joined GLOBAL ROOM ${globalRoomId} (frontend thinks: ${sessionId})`
+      );
 
       // Notify others about new participant
-      socket.to("global_video_call").emit("user_joined_call", {
+      socket.to(globalRoomId).emit("user_joined_call", {
         userId: socket.userId,
         userData: userData,
+        sessionId: "1234", // Always show room 1234
         timestamp: new Date(),
       });
 
       // Send current participants to new user
       const participants = [];
-      const sockets = io.sockets.adapter.rooms.get("global_video_call");
+      const sockets = io.sockets.adapter.rooms.get(globalRoomId);
       if (sockets) {
         sockets.forEach((socketId) => {
           const participantSocket = io.sockets.sockets.get(socketId);
@@ -98,6 +131,7 @@ function initializeWebSocket(server) {
             participants.push({
               userId: participantSocket.userId,
               userData: participantSocket.userData,
+              sessionId: "1234", // Always show room 1234
             });
           }
         });
@@ -106,14 +140,71 @@ function initializeWebSocket(server) {
       socket.emit("current_call_participants", participants);
     });
 
-    // Handle leaving global video call
-    socket.on("leave_global_call", () => {
-      socket.leave("global_video_call");
-      console.log(`User ${socket.userId} left global video call`);
+    // Handle leaving individual video call (secretly leaves room 1234)
+    socket.on("leave_video_call", (sessionId) => {
+      const globalRoomId = "1234";
+      socket.leave(globalRoomId);
+      console.log(
+        `🎥 User ${socket.userId} left GLOBAL ROOM ${globalRoomId} (frontend thinks: ${sessionId})`
+      );
 
       // Notify others about participant leaving
-      socket.to("global_video_call").emit("user_left_call", {
+      socket.to(globalRoomId).emit("user_left_call", {
         userId: socket.userId,
+        sessionId: "1234", // Always show room 1234
+        timestamp: new Date(),
+      });
+    });
+
+    // Handle global video call room joining (legacy - also goes to room 1234)
+    socket.on("join_global_call", (userData) => {
+      const globalRoomId = "1234";
+      socket.join(globalRoomId);
+      socket.userData = userData;
+      socket.globalRoomId = globalRoomId;
+      console.log(
+        `User ${socket.userId} joined GLOBAL ROOM ${globalRoomId} (legacy)`
+      );
+
+      // Notify others about new participant
+      socket.to(globalRoomId).emit("user_joined_call", {
+        userId: socket.userId,
+        userData: userData,
+        sessionId: "1234", // Always show room 1234
+        timestamp: new Date(),
+      });
+
+      // Send current participants to new user
+      const participants = [];
+      const sockets = io.sockets.adapter.rooms.get(globalRoomId);
+      if (sockets) {
+        sockets.forEach((socketId) => {
+          const participantSocket = io.sockets.sockets.get(socketId);
+          if (participantSocket && participantSocket.userId !== socket.userId) {
+            participants.push({
+              userId: participantSocket.userId,
+              userData: participantSocket.userData,
+              sessionId: "1234", // Always show room 1234
+            });
+          }
+        });
+      }
+
+      socket.emit("current_call_participants", participants);
+    });
+
+    // Handle leaving global video call (legacy - leaves room 1234)
+    socket.on("leave_global_call", () => {
+      const globalRoomId = "1234";
+      socket.leave(globalRoomId);
+      console.log(
+        `User ${socket.userId} left GLOBAL ROOM ${globalRoomId} (legacy)`
+      );
+
+      // Notify others about participant leaving
+      socket.to(globalRoomId).emit("user_left_call", {
+        userId: socket.userId,
+        sessionId: "1234", // Always show room 1234
         timestamp: new Date(),
       });
     });
@@ -521,7 +612,18 @@ function initializeWebSocket(server) {
 
       console.log(`Chat message in ${chatId} from ${senderName}: ${content}`);
 
-      // Broadcast to chat room (excluding sender)
+      // 🌍 GLOBAL CHAT: Send to global chat room instead of individual chat
+      socket.to("global_chat").emit("chat_message", {
+        chatId: "global_chat", // Force global chat ID
+        messageId,
+        senderId,
+        senderName,
+        content,
+        timestamp,
+        type,
+      });
+
+      // Also send to original chat room for backward compatibility
       socket.to(chatId).emit("chat_message", {
         chatId,
         messageId,
@@ -539,13 +641,45 @@ function initializeWebSocket(server) {
         senderName,
         content: content.substring(0, 50) + (content.length > 50 ? "..." : ""),
         timestamp,
-        chatId,
+        chatId: "global_chat", // Force global chat ID
         recipientId,
+      });
+    });
+
+    // 🌍 GLOBAL CHAT MESSAGE HANDLER
+    socket.on("send_global_message", (data) => {
+      const {
+        messageId,
+        senderId,
+        senderName,
+        content,
+        timestamp,
+        type = "text",
+      } = data;
+
+      console.log(`🌍 Global chat message from ${senderName}: ${content}`);
+
+      // Broadcast to ALL users in global chat room (excluding sender)
+      socket.to("global_chat").emit("global_chat_message", {
+        messageId,
+        senderId,
+        senderName,
+        content,
+        timestamp,
+        type,
       });
     });
 
     socket.on("typing", (data) => {
       const { chatId, userId, isTyping } = data;
+      // 🌍 GLOBAL TYPING: Send to global chat room
+      socket.to("global_chat").emit("user_typing", {
+        chatId: "global_chat",
+        userId,
+        isTyping,
+      });
+
+      // Also send to original chat room for backward compatibility
       socket.to(chatId).emit("user_typing", {
         chatId,
         userId,
@@ -557,9 +691,10 @@ function initializeWebSocket(server) {
     socket.on("disconnect", () => {
       console.log(`User ${socket.userId} disconnected`);
 
-      // Notify global call participants if user was in call
-      socket.to("global_video_call").emit("user_left_call", {
+      // Notify GLOBAL ROOM 1234 participants if user was in call
+      socket.to("1234").emit("user_left_call", {
         userId: socket.userId,
+        sessionId: "1234", // Always show room 1234
         timestamp: new Date(),
       });
     });
