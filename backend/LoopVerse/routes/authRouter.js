@@ -133,7 +133,7 @@ router.post(
   "/signup",
   [
     check("firstName", "First name is required").notEmpty(),
-    check("lastName", "Last name is required").notEmpty(),
+    // check("lastName", "Last name is required").notEmpty(),
     check("email", "Please include a valid email").isEmail(),
     check("password", "Password must be at least 6 characters long").isLength({
       min: 6,
@@ -156,7 +156,7 @@ router.post(
 
       const {
         firstName,
-        lastName,
+        // lastName,
         email,
         password,
         role,
@@ -179,7 +179,7 @@ router.post(
       let user;
       const userData = {
         firstName,
-        lastName,
+        // lastName,
         email,
         password,
         interests: interests || [],
@@ -219,7 +219,7 @@ router.post(
         id: user._id,
         name: `${user.firstName} ${user.lastName}`,
         firstName: user.firstName,
-        lastName: user.lastName,
+        // lastName: user.lastName,
         email: user.email,
         role: role, // Use normalized role
         profilePicture: user.profilePicture,
@@ -276,7 +276,7 @@ router.get("/me", auth, async (req, res) => {
       id: user._id,
       name: `${user.firstName} ${user.lastName}`,
       firstName: user.firstName,
-      lastName: user.lastName,
+      // lastName: user.lastName,
       email: user.email,
       role: req.user.userType, // Always use the normalized userType from JWT
       profilePicture: user.profilePicture,

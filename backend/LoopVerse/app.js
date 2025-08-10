@@ -19,6 +19,7 @@ var learnerRouter = require("./routes/LeranerRouter");
 var mentorRouter = require("./routes/MentorRouter");
 var adminRouter = require("./routes/adminRouter");
 var sessionRouter = require("./routes/sessionRouter");
+var analyticsRouter = require("./routes/analyticsRouter"); // Add this line
 
 var app = express();
 
@@ -79,6 +80,7 @@ app.use("/api/learners", learnerRouter);
 app.use("/api/mentors", mentorRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/sessions", sessionRouter);
+app.use("/api/analytics", analyticsRouter); // Add this line
 
 // Error handling middleware
 app.use((err, req, res, next) => {

@@ -41,7 +41,10 @@ export const SmartMentorRecommendations: React.FC<SmartMentorRecommendationsProp
   }, [userProfile, availableMentors]);
 
   const generateRecommendations = async () => {
-    if (availableMentors.length === 0) return;
+    if (!availableMentors || availableMentors.length === 0) {
+      setRecommendations([]);
+      return;
+    }
     
     setIsLoading(true);
     try {
@@ -60,6 +63,7 @@ export const SmartMentorRecommendations: React.FC<SmartMentorRecommendationsProp
       setRecommendations(aiRecommendations);
     } catch (error) {
       console.error('Failed to generate mentor recommendations:', error);
+      setRecommendations([]);
     } finally {
       setIsLoading(false);
     }

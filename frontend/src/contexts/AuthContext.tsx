@@ -127,11 +127,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Split name into firstName and lastName
       const nameParts = data.name.trim().split(" ");
       const firstName = nameParts[0] || "";
-      const lastName = nameParts.slice(1).join(" ") || "";
+      // const lastName = nameParts.slice(1).join(" ") || "";
 
       const signupData = {
         firstName,
-        lastName,
+        // lastName,
         email: data.email,
         password: data.password,
         role: data.role,

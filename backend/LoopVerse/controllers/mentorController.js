@@ -843,33 +843,11 @@ const mentorController = {
    */
   getAllMentors: async (req, res) => {
     try {
-      const {
-        expertise,
-        minRating,
-        skills,
-        page = 1,
-        limit = 10,
-        search,
-      } = req.query;
+      const { page = 1, limit = 10, skills, search, rating } = req.query;
 
-      // Build query
       let query = { isVerified: true, isActive: true };
 
-      if (expertise) {
-        query.expertise = {
-          $in: Array.isArray(expertise) ? expertise : [expertise],
-        };
-      }
-
-      if (skills) {
-        const skillsArray = Array.isArray(skills) ? skills : [skills];
-        query["skills.name"] = { $in: skillsArray };
-      }
-
-      if (minRating) {
-        query["ratings.averageRating"] = { $gte: parseFloat(minRating) };
-      }
-
+      // Add search filter
       if (search) {
         query.$or = [
           { firstName: { $regex: search, $options: "i" } },
@@ -879,32 +857,45 @@ const mentorController = {
         ];
       }
 
+      // Add skills filter
+      if (skills) {
+        const skillsArray = Array.isArray(skills) ? skills : [skills];
+        query["skills.name"] = { $in: skillsArray };
+      }
+
+      // Add rating filter
+      if (rating) {
+        query["ratings.averageRating"] = { $gte: parseFloat(rating) };
+      }
+
       const skip = (parseInt(page) - 1) * parseInt(limit);
 
       const mentors = await Mentor.find(query)
-        .select(
-          "firstName lastName profilePicture biography expertise skills ratings hourlyRate timezone"
-        )
-        .sort({ "ratings.averageRating": -1 })
+        .select("-password -loginHistory -__v")
+        .sort({ "ratings.averageRating": -1, createdAt: -1 })
         .skip(skip)
         .limit(parseInt(limit));
 
       const total = await Mentor.countDocuments(query);
 
-      // Transform mentors for frontend
       const transformedMentors = mentors.map((mentor) => ({
         id: mentor._id,
         name: `${mentor.firstName} ${mentor.lastName}`,
         firstName: mentor.firstName,
         lastName: mentor.lastName,
-        profilePicture: mentor.profilePicture,
-        biography: mentor.biography,
+        email: mentor.email,
+        bio: mentor.biography,
+        skills: mentor.skills.map((skill) => skill.name || skill),
         expertise: mentor.expertise,
-        skills: mentor.skills,
-        rating: mentor.ratings.averageRating,
-        totalRatings: mentor.ratings.totalRatings,
         hourlyRate: mentor.hourlyRate,
+        rating: mentor.ratings.averageRating || 0,
+        totalSessions: mentor.sessionsCompleted || 0,
+        profilePicture: mentor.profilePicture,
         timezone: mentor.timezone,
+        isVerified: mentor.isVerified,
+        yearsOfExperience: mentor.yearsOfExperience,
+        languages: mentor.languages,
+        createdAt: mentor.createdAt,
       }));
 
       res.json({
@@ -915,13 +906,12 @@ const mentorController = {
           page: parseInt(page),
           totalPages: Math.ceil(total / parseInt(limit)),
         },
-        message: "Mentors retrieved successfully",
       });
     } catch (error) {
-      console.error("Error fetching mentors:", error);
+      console.error("Get mentors error:", error);
       res.status(500).json({
         success: false,
-        error: "Server error while fetching mentors",
+        error: "Failed to fetch mentors",
       });
     }
   },

@@ -52,7 +52,7 @@ export const MentorApprovals: React.FC = () => {
           // Transform backend data to frontend format
           const transformedApplications = response.data.map((mentor: any) => ({
             id: mentor._id || mentor.id,
-            name: `${mentor.firstName} ${mentor.lastName}`,
+            name: `${mentor.firstName} `,
             email: mentor.email,
             skills:
               mentor.skills?.map((skill: any) =>

@@ -166,8 +166,10 @@ export const ProgressTracker: React.FC<ProgressTrackerProps> = ({
             <Target className="h-8 w-8 text-purple-500" />
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Skills Learned</p>
-              <p className="text-2xl font-bold text-gray-900">{progressData.skillsLearned.length}</p>
-            </div>
+              <p className="text-2xl font-bold text-gray-900">
+    {progressData.skillsLearned?.length ? progressData.skillsLearned.length : "No Skills yet"}
+  </p>
+                         </div>
           </div>
         </div>
 
@@ -186,7 +188,7 @@ export const ProgressTracker: React.FC<ProgressTrackerProps> = ({
       <div className="bg-white rounded-lg shadow p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Skills Progress</h3>
         <div className="space-y-4">
-          {progressData.skillProgress.map((skill, index) => (
+          {progressData.skillProgress?.map((skill, index) => (
             <div key={index} className="flex items-center justify-between">
               <div className="flex-1">
                 <div className="flex items-center justify-between mb-1">
@@ -203,7 +205,7 @@ export const ProgressTracker: React.FC<ProgressTrackerProps> = ({
                 </div>
               </div>
             </div>
-          ))}
+          )) || <p className="text-gray-500">No skill progress data available</p>}
         </div>
       </div>
 
@@ -211,7 +213,7 @@ export const ProgressTracker: React.FC<ProgressTrackerProps> = ({
       <div className="bg-white rounded-lg shadow p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Monthly Progress</h3>
         <div className="space-y-4">
-          {progressData.monthlyProgress.map((month, index) => (
+          {progressData.monthlyProgress?.map((month, index) => (
             <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
               <div className="flex items-center">
                 <BarChart3 className="h-5 w-5 text-blue-500 mr-3" />
@@ -222,12 +224,12 @@ export const ProgressTracker: React.FC<ProgressTrackerProps> = ({
                 <span>{month.hours} hours</span>
               </div>
             </div>
-          ))}
+          )) || <p className="text-gray-500">No monthly progress data available</p>}
         </div>
       </div>
 
       {/* Recent Achievements */}
-      {progressData.recentAchievements.length > 0 && (
+      {progressData?.recentAchievements?.length > 0 && (
         <div className="bg-white rounded-lg shadow p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Achievements</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -248,7 +250,7 @@ export const ProgressTracker: React.FC<ProgressTrackerProps> = ({
       )}
 
       {/* Upcoming Sessions */}
-      {progressData.upcomingSessions.length > 0 && (
+      {progressData?.upcomingSessions?.length > 0 && (
         <div className="bg-white rounded-lg shadow p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Upcoming Sessions</h3>
           <div className="space-y-3">

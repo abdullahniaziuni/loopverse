@@ -71,9 +71,9 @@ export const SessionRoom: React.FC = () => {
             mentor: {
               id: sessionData.mentorId?._id || sessionData.mentorId,
               name:
-                sessionData.mentorId?.firstName &&
-                sessionData.mentorId?.lastName
-                  ? `${sessionData.mentorId.firstName} ${sessionData.mentorId.lastName}`
+                sessionData.mentorId?.firstName 
+                // sessionData.mentorId?.lastName
+                  ? `${sessionData.mentorId.firstName} `
                   : "Mentor",
               profilePicture:
                 sessionData.mentorId?.profilePicture ||
@@ -82,9 +82,8 @@ export const SessionRoom: React.FC = () => {
             learner: {
               id: sessionData.learnerId?._id || sessionData.learnerId,
               name:
-                sessionData.learnerId?.firstName &&
-                sessionData.learnerId?.lastName
-                  ? `${sessionData.learnerId.firstName} ${sessionData.learnerId.lastName}`
+                sessionData.learnerId?.firstName
+                  ? `${sessionData.learnerId.firstName} `
                   : "Learner",
               profilePicture:
                 sessionData.learnerId?.profilePicture ||
