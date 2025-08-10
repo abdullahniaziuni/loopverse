@@ -589,7 +589,7 @@ const MentorCard: React.FC<MentorCardProps> = ({ mentor }) => {
               <Video className="w-4 h-4 mr-1" />
               Book
             </Button>
-            <Link to={`/mentors/${mentor.id}`}>
+            <Link to={`/learner/mentors/${mentor.id}`}>
               <Button
                 size="sm"
                 variant="outline"
